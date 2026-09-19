@@ -1,1005 +1,1238 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-name="viewport"
-content="width=device-width, initial-scale=1.0"
->
-
-<title>DOP NEWS 24</title>
-
-<meta
-name="description"
-content="DOP NEWS 24 - সর্বশেষ বাংলা সংবাদ"
->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#c00">
+<title>DOP NEWS 24 — বিশ্ব সংবাদ</title>
 
 <style>
+:root{
+  --red:#c00;
+  --dark:#111;
+  --bg:#f5f5f5;
+  --card:#fff;
+  --line:#ddd;
+}
 
 *{
-    box-sizing:border-box;
+  box-sizing:border-box;
 }
 
 body{
-    margin:0;
-    font-family:
-    "Noto Serif Bengali",
-    "Noto Sans Bengali",
-    Arial,
-    sans-serif;
-    background:#f3f4f6;
-    color:#111827;
+  margin:0;
+  font-family:Arial,"Noto Sans Bengali",sans-serif;
+  background:var(--bg);
+  color:#111;
 }
 
-header{
-    background:#b91c1c;
-    color:white;
-    padding:18px 15px;
-    position:sticky;
-    top:0;
-    z-index:20;
-    box-shadow:0 2px 8px rgba(0,0,0,.2);
-}
-
-.header-inner{
-    max-width:1200px;
-    margin:auto;
-}
-
-.logo{
-    font-size:30px;
-    font-weight:900;
-    margin:0;
-}
-
-.subtitle{
-    font-size:13px;
-    opacity:.9;
-    margin-top:2px;
-}
-
-nav{
-    margin-top:15px;
-    display:flex;
-    gap:8px;
-    overflow-x:auto;
-}
-
-nav button{
-    border:0;
-    background:rgba(255,255,255,.15);
-    color:white;
-    padding:8px 15px;
-    border-radius:20px;
-    cursor:pointer;
-    white-space:nowrap;
-    font-family:inherit;
-}
-
-nav button.active{
-    background:white;
-    color:#b91c1c;
-    font-weight:bold;
-}
-
-.ticker{
-    background:#111827;
-    color:white;
-    padding:10px 15px;
-    overflow:hidden;
-}
-
-.ticker-inner{
-    max-width:1200px;
-    margin:auto;
-    white-space:nowrap;
-    overflow:hidden;
+a{
+  text-decoration:none;
+  color:inherit;
 }
 
 .container{
-    max-width:1200px;
-    margin:25px auto;
-    padding:0 15px;
+  max-width:1240px;
+  margin:auto;
+  padding:0 18px;
 }
 
-.status{
-    background:white;
-    border-radius:12px;
-    padding:15px;
-    margin-bottom:20px;
-    text-align:center;
-    color:#6b7280;
+/* TOP BAR */
+.top{
+  background:#111;
+  color:#fff;
+  font-size:13px;
+}
+
+.top .container{
+  height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+/* HEADER */
+header{
+  background:#fff;
+  border-bottom:1px solid #ddd;
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+
+.head{
+  min-height:76px;
+  display:flex;
+  align-items:center;
+  gap:24px;
+}
+
+.logo{
+  font-weight:900;
+  font-size:30px;
+  letter-spacing:-1px;
+  white-space:nowrap;
+}
+
+.logo b{
+  color:var(--red);
+}
+
+nav{
+  display:flex;
+  gap:20px;
+  overflow:auto;
+  flex:1;
+}
+
+nav a{
+  font-weight:700;
+  font-size:15px;
+  white-space:nowrap;
+  padding:29px 0;
+  border-bottom:3px solid transparent;
+}
+
+nav a:hover{
+  border-color:var(--red);
+}
+
+.actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.lang,
+.search{
+  border:1px solid #ccc;
+  background:#fff;
+  border-radius:5px;
+  padding:9px 10px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.lang{
+  min-width:100px;
+}
+
+/* BREAKING */
+.ticker{
+  background:var(--red);
+  color:#fff;
+  overflow:hidden;
+}
+
+.ticker .container{
+  display:flex;
+  align-items:center;
+  height:42px;
+  overflow:hidden;
+}
+
+.ticker strong{
+  background:#900;
+  padding:12px 15px;
+  margin-left:-18px;
+  margin-right:14px;
+  white-space:nowrap;
+}
+
+.ticker-track{
+  white-space:nowrap;
+  animation:scroll 28s linear infinite;
+}
+
+@keyframes scroll{
+  from{
+    transform:translateX(0);
+  }
+  to{
+    transform:translateX(-35%);
+  }
+}
+
+/* MAIN */
+main{
+  padding:22px 0 40px;
+}
+
+.hero-grid{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:20px;
+}
+
+/* HERO */
+.hero{
+  background:#000;
+  color:#fff;
+  min-height:420px;
+  position:relative;
+  overflow:hidden;
+  border-radius:4px;
+  cursor:pointer;
+}
+
+.hero img{
+  width:100%;
+  height:100%;
+  min-height:420px;
+  object-fit:cover;
+  opacity:.82;
+}
+
+.hero-info{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  padding:28px;
+  background:linear-gradient(
+    transparent,
+    rgba(0,0,0,.92)
+  );
+}
+
+.tag{
+  display:inline-block;
+  background:var(--red);
+  color:#fff;
+  padding:5px 9px;
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:9px;
+}
+
+.hero h1{
+  font-size:34px;
+  line-height:1.14;
+  margin:0 0 10px;
+}
+
+.hero p{
+  margin:0;
+  color:#ddd;
+  line-height:1.55;
+}
+
+/* TRENDING */
+.side{
+  background:var(--card);
+  border-top:4px solid var(--red);
+  padding:16px;
+}
+
+.side h2,
+.section-title{
+  margin:0 0 14px;
+  font-size:21px;
+}
+
+.trend{
+  display:grid;
+  grid-template-columns:45px 1fr;
+  gap:10px;
+  padding:13px 0;
+  border-bottom:1px solid var(--line);
+  cursor:pointer;
+}
+
+.trend:last-child{
+  border:0;
+}
+
+.trend img{
+  width:55px;
+  height:55px;
+  object-fit:cover;
+}
+
+.trend b{
+  font-size:15px;
+  line-height:1.35;
+}
+
+.num{
+  color:#aaa;
+  font-size:22px;
+  font-weight:900;
+}
+
+/* NEWS */
+.section{
+  margin-top:25px;
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:3px solid #111;
+  margin-bottom:15px;
+}
+
+.section-title{
+  border-left:5px solid var(--red);
+  padding-left:9px;
 }
 
 .grid{
-    display:grid;
-    grid-template-columns:
-    repeat(auto-fill,minmax(280px,1fr));
-    gap:20px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:18px;
 }
 
 .card{
-    background:white;
-    border-radius:14px;
-    overflow:hidden;
-    box-shadow:
-    0 3px 12px rgba(0,0,0,.08);
-    cursor:pointer;
-    transition:.2s;
+  background:var(--card);
+  border:1px solid #e2e2e2;
+  overflow:hidden;
+  transition:.2s;
+  cursor:pointer;
 }
 
 .card:hover{
-    transform:translateY(-3px);
-    box-shadow:
-    0 7px 20px rgba(0,0,0,.13);
+  transform:translateY(-2px);
+  box-shadow:0 5px 18px #0001;
 }
 
-.card-image{
-    width:100%;
-    height:190px;
-    object-fit:cover;
-    display:block;
-    background:#e5e7eb;
+.card img{
+  width:100%;
+  height:190px;
+  object-fit:cover;
+  display:block;
 }
 
-.card-body{
-    padding:16px;
+.body{
+  padding:14px;
 }
 
-.category{
-    display:inline-block;
-    background:#fee2e2;
-    color:#b91c1c;
-    font-size:12px;
-    padding:4px 9px;
-    border-radius:15px;
-    margin-bottom:9px;
+.cat{
+  color:var(--red);
+  font-weight:800;
+  font-size:12px;
 }
 
-.card-title{
-    font-size:19px;
-    line-height:1.55;
-    margin:0 0 9px;
-    font-weight:800;
+.card h3{
+  font-size:19px;
+  line-height:1.3;
+  margin:7px 0;
 }
 
-.card-summary{
-    color:#4b5563;
-    line-height:1.7;
-    font-size:14px;
-
-    display:-webkit-box;
-    -webkit-line-clamp:4;
-    -webkit-box-orient:vertical;
-    overflow:hidden;
+.card p{
+  color:#666;
+  line-height:1.5;
+  margin:0;
+  font-size:14px;
 }
 
-.date{
-    margin-top:12px;
-    color:#9ca3af;
-    font-size:12px;
+/* LOADING */
+.status{
+  text-align:center;
+  padding:25px;
+  color:#666;
 }
 
+.spinner{
+  display:inline-block;
+  width:24px;
+  height:24px;
+  border:3px solid #ddd;
+  border-top-color:var(--red);
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+  vertical-align:middle;
+  margin-right:7px;
+}
+
+@keyframes spin{
+  to{
+    transform:rotate(360deg);
+  }
+}
+
+/* FOOTER */
+footer{
+  background:#111;
+  color:#ddd;
+  margin-top:20px;
+}
+
+.foot{
+  padding:30px 18px;
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr;
+  gap:30px;
+}
+
+.foot h3{
+  color:#fff;
+  margin-top:0;
+}
+
+.copyright{
+  border-top:1px solid #333;
+  padding:15px 18px;
+  text-align:center;
+  color:#999;
+  font-size:13px;
+}
+
+/* MODAL */
 .modal{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.7);
-    z-index:100;
-    overflow-y:auto;
-    padding:20px;
+  display:none;
+  position:fixed;
+  inset:0;
+  background:#0008;
+  z-index:50;
+  align-items:flex-start;
+  justify-content:center;
+  padding:60px 15px;
 }
 
-.modal-box{
-    max-width:850px;
-    margin:30px auto;
-    background:white;
-    border-radius:16px;
-    overflow:hidden;
+.modal.open{
+  display:flex;
 }
 
-.modal-image{
-    width:100%;
-    max-height:450px;
-    object-fit:cover;
+.modalbox{
+  background:#fff;
+  max-width:850px;
+  width:100%;
+  max-height:90vh;
+  overflow:auto;
+  border-radius:6px;
 }
 
-.modal-content{
-    padding:25px;
-}
-
-.modal-title{
-    font-size:29px;
-    line-height:1.5;
-    margin:0 0 12px;
-}
-
-.modal-date{
-    color:#9ca3af;
-    font-size:13px;
-    margin-bottom:20px;
-}
-
-.article-text{
-    font-size:18px;
-    line-height:2;
-    color:#1f2937;
-}
-
-.article-text p{
-    margin:0 0 20px;
+.modalhead{
+  padding:15px;
+  border-bottom:1px solid #ddd;
+  display:flex;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  background:#fff;
 }
 
 .close{
-    position:fixed;
-    right:20px;
-    top:15px;
-    background:#b91c1c;
-    color:white;
-    border:0;
-    width:42px;
-    height:42px;
-    border-radius:50%;
-    font-size:25px;
-    cursor:pointer;
+  border:0;
+  background:#111;
+  color:#fff;
+  border-radius:4px;
+  padding:7px 11px;
+  cursor:pointer;
 }
 
-footer{
-    text-align:center;
-    padding:35px 15px;
-    color:#6b7280;
+.article{
+  padding:20px;
 }
 
+.article img{
+  width:100%;
+  max-height:430px;
+  object-fit:cover;
+}
+
+.article h1{
+  font-size:32px;
+  line-height:1.2;
+}
+
+.article p{
+  font-size:17px;
+  line-height:1.8;
+  color:#333;
+}
+
+/* TABLET */
+@media(max-width:900px){
+
+  .hero-grid{
+    grid-template-columns:1fr;
+  }
+
+  .grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .hero h1{
+    font-size:28px;
+  }
+
+  .foot{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+/* MOBILE */
 @media(max-width:600px){
 
-    .logo{
-        font-size:25px;
-    }
+  .head{
+    min-height:62px;
+    gap:10px;
+  }
 
-    .card-image{
-        height:180px;
-    }
+  .logo{
+    font-size:23px;
+  }
 
-    .modal{
-        padding:8px;
-    }
+  nav{
+    display:none;
+  }
 
-    .modal-box{
-        margin:20px auto;
-    }
+  .actions{
+    margin-left:auto;
+  }
 
-    .modal-content{
-        padding:18px;
-    }
+  .search{
+    display:none;
+  }
 
-    .modal-title{
-        font-size:23px;
-    }
+  .lang{
+    min-width:80px;
+    padding:8px;
+  }
 
-    .article-text{
-        font-size:17px;
-        line-height:1.9;
-    }
+  .ticker .container{
+    height:38px;
+  }
 
+  .grid{
+    grid-template-columns:1fr;
+  }
+
+  .card img{
+    height:210px;
+  }
+
+  .hero,
+  .hero img{
+    min-height:360px;
+  }
+
+  .hero-info{
+    padding:18px;
+  }
+
+  .hero h1{
+    font-size:25px;
+  }
+
+  .top .container{
+    font-size:11px;
+  }
 }
-
 </style>
-
 </head>
 
 <body>
 
+<!-- TOP -->
+<div class="top">
+  <div class="container">
+    <span id="dateText">সর্বশেষ সংবাদ</span>
+    <span>DOP NEWS 24</span>
+  </div>
+</div>
+
+<!-- HEADER -->
 <header>
 
-<div class="header-inner">
+  <div class="container head">
 
-<h1 class="logo">
-DOP NEWS 24
-</h1>
+    <a class="logo" href="#">
+      DOP <b>NEWS 24</b>
+    </a>
 
-<div class="subtitle">
-সত্য ও তথ্যভিত্তিক বাংলা সংবাদ
-</div>
+    <nav>
 
-<nav>
+      <a href="#latest" data-cat="all">
+        হোম
+      </a>
 
-<button
-class="active"
-data-category="সব">
-সব
-</button>
+      <a href="#latest" data-cat="বাংলাদেশ">
+        বাংলাদেশ
+      </a>
 
-<button
-data-category="বাংলাদেশ">
-বাংলাদেশ
-</button>
+      <a href="#latest" data-cat="বিশ্ব">
+        বিশ্ব
+      </a>
 
-<button
-data-category="বিশ্ব">
-বিশ্ব
-</button>
+      <a href="#latest" data-cat="খেলা">
+        খেলা
+      </a>
 
-<button
-data-category="খেলা">
-খেলা
-</button>
+      <a href="#latest" data-cat="বিনোদন">
+        বিনোদন
+      </a>
 
-<button
-data-category="প্রযুক্তি">
-প্রযুক্তি
-</button>
+      <a href="#latest" data-cat="প্রযুক্তি">
+        প্রযুক্তি
+      </a>
 
-</nav>
+    </nav>
 
-</div>
+    <div class="actions">
+
+      <select class="lang" id="langSelect">
+
+        <option value="bn">
+          বাংলা
+        </option>
+
+        <option value="en">
+          English
+        </option>
+
+        <option value="hi">
+          हिन्दी
+        </option>
+
+        <option value="ar">
+          العربية
+        </option>
+
+        <option value="es">
+          Español
+        </option>
+
+        <option value="fr">
+          Français
+        </option>
+
+        <option value="zh-CN">
+          中文
+        </option>
+
+        <option value="ru">
+          Русский
+        </option>
+
+      </select>
+
+      <button class="search" id="searchBtn">
+        ⌕
+      </button>
+
+    </div>
+
+  </div>
 
 </header>
 
-
+<!-- BREAKING -->
 <div class="ticker">
 
-<div class="ticker-inner">
+  <div class="container">
 
-<span id="tickerText">
-সর্বশেষ সংবাদ লোড হচ্ছে...
-</span>
+    <strong>
+      🔴 BREAKING
+    </strong>
+
+    <div
+      class="ticker-track"
+      id="tickerTrack"
+    >
+      সর্বশেষ খবর লোড হচ্ছে...
+    </div>
+
+  </div>
 
 </div>
 
-</div>
-
-
+<!-- MAIN -->
 <main class="container">
 
-<div
-id="status"
-class="status">
-সংবাদ লোড হচ্ছে...
-</div>
+  <div
+    id="status"
+    class="status"
+  >
+    <span class="spinner"></span>
+    সর্বশেষ সংবাদ লোড হচ্ছে...
+  </div>
 
-<div
-id="newsGrid"
-class="grid">
-</div>
+  <div
+    id="content"
+    style="display:none"
+  >
+
+    <!-- HERO + TRENDING -->
+    <div class="hero-grid">
+
+      <article
+        class="hero"
+        id="hero"
+      >
+      </article>
+
+      <aside class="side">
+
+        <h2>
+          🔥 ট্রেন্ডিং
+        </h2>
+
+        <div id="trending"></div>
+
+      </aside>
+
+    </div>
+
+    <!-- LATEST -->
+    <section
+      class="section"
+      id="latest"
+    >
+
+      <div class="section-head">
+
+        <h2 class="section-title">
+          সর্বশেষ সংবাদ
+        </h2>
+
+        <span id="count"></span>
+
+      </div>
+
+      <div
+        class="grid"
+        id="newsGrid"
+      >
+      </div>
+
+    </section>
+
+  </div>
 
 </main>
 
-
+<!-- FOOTER -->
 <footer>
 
-© 2026 DOP NEWS 24
+  <div class="container foot">
+
+    <div>
+
+      <h3>
+        DOP NEWS 24
+      </h3>
+
+      <p>
+        বিশ্বের গুরুত্বপূর্ণ সংবাদ এক জায়গায়।
+        বিভিন্ন ভাষায় সংবাদ পড়ার সুবিধাসহ
+        একটি স্বাধীন নিউজ প্ল্যাটফর্ম।
+      </p>
+
+    </div>
+
+    <div>
+
+      <h3>
+        বিভাগ
+      </h3>
+
+      <p>
+        বাংলাদেশ<br>
+        বিশ্ব<br>
+        খেলা<br>
+        বিনোদন<br>
+        প্রযুক্তি
+      </p>
+
+    </div>
+
+    <div>
+
+      <h3>
+        ভাষা
+      </h3>
+
+      <p>
+        বাংলা · English · العربية<br>
+        हिन्दी · Español · Français<br>
+        中文 · Русский
+      </p>
+
+    </div>
+
+  </div>
+
+  <div class="copyright">
+    © 2026 DOP NEWS 24 · All rights reserved.
+  </div>
 
 </footer>
 
-
-<!-- MODAL -->
-
+<!-- ARTICLE MODAL -->
 <div
-id="modal"
-class="modal">
-
-<button
-class="close"
-onclick="closeModal()">
-×
-</button>
-
-<div class="modal-box">
-
-<img
-id="modalImage"
-class="modal-image"
-src=""
-alt=""
+  class="modal"
+  id="modal"
 >
 
-<div class="modal-content">
+  <div class="modalbox">
 
-<div
-id="modalCategory"
-class="category">
+    <div class="modalhead">
+
+      <b id="modalTitle">
+        সংবাদ
+      </b>
+
+      <button
+        class="close"
+        id="close"
+      >
+        ✕
+      </button>
+
+    </div>
+
+    <article
+      class="article"
+      id="article"
+    >
+    </article>
+
+  </div>
+
 </div>
-
-<h2
-id="modalTitle"
-class="modal-title">
-</h2>
-
-<div
-id="modalDate"
-class="modal-date">
-</div>
-
-<div
-id="modalText"
-class="article-text">
-</div>
-
-</div>
-
-</div>
-
-</div>
-
 
 <script>
 
-let allNews = [];
+/* RSS FEEDS */
 
-let currentCategory = "সব";
+const FEEDS = [
+
+  {
+    url:"https://feeds.bbci.co.uk/news/world/rss.xml",
+    cat:"বিশ্ব"
+  },
+
+  {
+    url:"https://rss.cnn.com/rss/edition.rss",
+    cat:"বিশ্ব"
+  },
+
+  {
+    url:"https://www.aljazeera.com/xml/rss/all.xml",
+    cat:"বিশ্ব"
+  }
+
+];
 
 
-/* --------------------------------
-   LOAD NEWS
--------------------------------- */
+/* FALLBACK IMAGES */
+
+const FALLBACK = [
+
+"https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80",
+
+"https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1200&q=80",
+
+"https://images.unsplash.com/photo-1551817958-20204d6abfb8?auto=format&fit=crop&w=1200&q=80",
+
+"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+
+"https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80",
+
+"https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=80"
+
+];
+
+
+/* VARIABLES */
+
+let stories = [];
+
+let activeCategory = "all";
+
+let currentLang =
+  localStorage.getItem("dop_lang") || "bn";
+
+
+/* UI TEXT */
+
+const UI = {
+
+  bn:{
+    latest:"সর্বশেষ সংবাদ",
+    trend:"ট্রেন্ডিং",
+    read:"বিস্তারিত পড়ুন",
+    loading:"সর্বশেষ সংবাদ লোড হচ্ছে...",
+    empty:"কোনো সংবাদ পাওয়া যায়নি",
+    breaking:"ব্রেকিং"
+  },
+
+  en:{
+    latest:"Latest News",
+    trend:"Trending",
+    read:"Read Full Story",
+    loading:"Loading latest news...",
+    empty:"No news found",
+    breaking:"BREAKING"
+  },
+
+  hi:{
+    latest:"नवीनतम समाचार",
+    trend:"ट्रेंडिंग",
+    read:"पूरी खबर पढ़ें",
+    loading:"समाचार लोड हो रहा है...",
+    empty:"कोई समाचार नहीं",
+    breaking:"ब्रेकिंग"
+  },
+
+  ar:{
+    latest:"آخر الأخبار",
+    trend:"الأكثر تداولاً",
+    read:"اقرأ الخبر كاملاً",
+    loading:"جارٍ تحميل الأخبار...",
+    empty:"لا توجد أخبار",
+    breaking:"عاجل"
+  },
+
+  es:{
+    latest:"Últimas noticias",
+    trend:"Tendencias",
+    read:"Leer noticia completa",
+    loading:"Cargando noticias...",
+    empty:"No hay noticias",
+    breaking:"ÚLTIMA HORA"
+  },
+
+  fr:{
+    latest:"Dernières nouvelles",
+    trend:"Tendances",
+    read:"Lire l'article",
+    loading:"Chargement des actualités...",
+    empty:"Aucune actualité",
+    breaking:"URGENT"
+  },
+
+  "zh-CN":{
+    latest:"最新消息",
+    trend:"热门",
+    read:"阅读全文",
+    loading:"正在加载新闻...",
+    empty:"暂无新闻",
+    breaking:"突发"
+  },
+
+  ru:{
+    latest:"Последние новости",
+    trend:"В тренде",
+    read:"Читать полностью",
+    loading:"Загрузка новостей...",
+    empty:"Новостей нет",
+    breaking:"СРОЧНО"
+  }
+
+};
+
+
+/* CLEAN TEXT */
+
+function cleanText(s=""){
+
+  return s
+
+    .replace(/<[^>]*>/g," ")
+
+    .replace(/&nbsp;/g," ")
+
+    .replace(/&amp;/g,"&")
+
+    .replace(/\s+/g," ")
+
+    .trim();
+
+}
+
+
+/* IMAGE */
+
+function imageOf(item,i){
+
+  return (
+
+    item.thumbnail ||
+
+    item.enclosure?.link ||
+
+    item.enclosure?.url ||
+
+    FALLBACK[i % FALLBACK.length]
+
+  );
+
+}
+
+
+/* CATEGORY */
+
+function guessCategory(t){
+
+  t = t.toLowerCase();
+
+  if(
+    /sport|football|cricket|tennis|olympic/
+    .test(t)
+  )
+    return "খেলা";
+
+  if(
+    /movie|film|music|actor|actress|entertainment/
+    .test(t)
+  )
+    return "বিনোদন";
+
+  if(
+    /tech|technology|ai |artificial intelligence|iphone|google|microsoft/
+    .test(t)
+  )
+    return "প্রযুক্তি";
+
+  if(
+    /bangladesh|dhaka/
+    .test(t)
+  )
+    return "বাংলাদেশ";
+
+  return "বিশ্ব";
+
+}
+
+
+/* LOAD RSS */
+
+async function loadFeed(feed){
+
+  const api =
+    "https://api.rss2json.com/v1/api.json?rss_url="
+    +
+    encodeURIComponent(feed.url);
+
+  const response =
+    await fetch(api);
+
+  if(!response.ok)
+    throw Error("feed");
+
+  const data =
+    await response.json();
+
+  return (data.items || []).map(
+    item => ({
+
+      title:
+        cleanText(item.title),
+
+      desc:
+        cleanText(
+          item.description ||
+          item.content ||
+          ""
+        ),
+
+      image:
+        imageOf(
+          item,
+          stories.length
+        ),
+
+      link:
+        item.link,
+
+      date:
+        item.pubDate,
+
+      cat:
+        guessCategory(
+          cleanText(item.title)
+        )
+
+    })
+  );
+
+}
+
+
+/* LOAD NEWS */
 
 async function loadNews(){
 
-    const status =
-    document.getElementById("status");
+  let all = [];
+
+  for(
+    const feed of FEEDS
+  ){
 
     try{
 
-        const response =
-        await fetch(
-            "./news.json?cache=" +
-            Date.now()
-        );
+      const data =
+        await loadFeed(feed);
 
-        if(!response.ok){
+      all.push(...data);
 
-            throw new Error(
-                "news.json পাওয়া যায়নি"
-            );
+    }catch(error){
+
+      console.log(
+        "RSS error",
+        error
+      );
+
+    }
+
+  }
+
+
+  const seen =
+    new Set();
+
+  stories =
+    all
+
+      .filter(
+        story => {
+
+          if(
+            !story.title ||
+            seen.has(story.title)
+          )
+            return false;
+
+          seen.add(
+            story.title
+          );
+
+          return true;
 
         }
+      )
 
-        const data =
-        await response.json();
+      .slice(0,30);
 
-        allNews =
-        Array.isArray(data.articles)
-        ? data.articles
-        : [];
 
-
-        if(allNews.length === 0){
-
-            status.innerText =
-            "এখনো কোনো সংবাদ প্রকাশিত হয়নি।";
-
-            return;
-
-        }
-
-
-        status.innerText =
-        allNews.length +
-        "টি সংবাদ পাওয়া গেছে";
-
-
-        renderNews();
-
-        updateTicker();
-
-    }
-
-    catch(error){
-
-        console.error(error);
-
-        status.innerText =
-        "সংবাদ লোড করতে সমস্যা হয়েছে।";
-
-    }
-
-}
-
-
-/* --------------------------------
-   IMAGE FALLBACK
--------------------------------- */
-
-function fallbackImage(category){
-
-    const configs = {
-
-        "বাংলাদেশ":{
-            icon:"🇧🇩",
-            text:"বাংলাদেশ"
-        },
-
-        "বিশ্ব":{
-            icon:"🌍",
-            text:"বিশ্ব সংবাদ"
-        },
-
-        "খেলা":{
-            icon:"🏆",
-            text:"খেলা"
-        },
-
-        "প্রযুক্তি":{
-            icon:"💻",
-            text:"প্রযুক্তি"
-        }
-
-    };
-
-
-    const item =
-    configs[category]
-    || {
-        icon:"📰",
-        text:"DOP NEWS 24"
-    };
-
-
-    const svg = `
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="900"
-        height="500"
-        viewBox="0 0 900 500"
-    >
-
-        <rect
-            width="900"
-            height="500"
-            fill="#991b1b"
-        />
-
-        <circle
-            cx="760"
-            cy="80"
-            r="220"
-            fill="#b91c1c"
-        />
-
-        <circle
-            cx="100"
-            cy="450"
-            r="250"
-            fill="#7f1d1d"
-        />
-
-        <text
-            x="450"
-            y="230"
-            text-anchor="middle"
-            font-size="110"
-        >
-            ${item.icon}
-        </text>
-
-        <text
-            x="450"
-            y="350"
-            text-anchor="middle"
-            fill="white"
-            font-size="48"
-            font-family="Arial"
-            font-weight="bold"
-        >
-            ${item.text}
-        </text>
-
-        <text
-            x="450"
-            y="410"
-            text-anchor="middle"
-            fill="white"
-            font-size="25"
-            font-family="Arial"
-        >
-            DOP NEWS 24
-        </text>
-
-    </svg>
-    `;
-
-
-    return "data:image/svg+xml;charset=UTF-8," +
-        encodeURIComponent(svg);
-
-}
-
-
-/* --------------------------------
-   GET IMAGE
--------------------------------- */
-
-function getImage(article){
-
-    if(
-        article.image &&
-        article.image.trim() !== ""
-    ){
-
-        return article.image;
-
-    }
-
-    return fallbackImage(
-        article.category
-    );
-
-}
-
-
-/* --------------------------------
-   RENDER
--------------------------------- */
-
-function renderNews(){
-
-    const grid =
-    document.getElementById(
-        "newsGrid"
-    );
-
-
-    let news =
-    allNews;
-
-
-    if(currentCategory !== "সব"){
-
-        news =
-        allNews.filter(
-            item =>
-            item.category ===
-            currentCategory
-        );
-
-    }
-
-
-    grid.innerHTML = "";
-
-
-    if(news.length === 0){
-
-        grid.innerHTML = `
-            <div class="status">
-                এই বিভাগে কোনো সংবাদ নেই।
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    news.forEach(
-        (article,index) => {
-
-            const card =
-            document.createElement(
-                "article"
-            );
-
-            card.className =
-            "card";
-
-
-            const image =
-            getImage(article);
-
-
-            card.innerHTML = `
-
-                <img
-                    class="card-image"
-                    src="${escapeHtml(image)}"
-                    alt=""
-                    onerror="
-                        this.onerror=null;
-                        this.src=fallbackImage(
-                            '${escapeJs(article.category)}'
-                        );
-                    "
-                >
-
-                <div class="card-body">
-
-                    <span class="category">
-                        ${escapeHtml(
-                            article.category || "সংবাদ"
-                        )}
-                    </span>
-
-                    <h2 class="card-title">
-                        ${escapeHtml(
-                            article.title || ""
-                        )}
-                    </h2>
-
-                    <div class="card-summary">
-                        ${escapeHtml(
-                            article.summary || ""
-                        )}
-                    </div>
-
-                    <div class="date">
-                        ${formatDate(
-                            article.published_at
-                        )}
-                    </div>
-
-                </div>
-
-            `;
-
-
-            card.onclick =
-            () => openModal(article);
-
-
-            grid.appendChild(card);
-
-        }
-    );
-
-}
-
-
-/* --------------------------------
-   MODAL
--------------------------------- */
-
-function openModal(article){
-
-    const modal =
-    document.getElementById(
-        "modal"
-    );
-
+  if(!stories.length){
 
     document.getElementById(
-        "modalImage"
-    ).src =
-    getImage(article);
-
-
-    document.getElementById(
-        "modalCategory"
-    ).innerText =
-    article.category || "সংবাদ";
-
-
-    document.getElementById(
-        "modalTitle"
-    ).innerText =
-    article.title || "";
-
-
-    document.getElementById(
-        "modalDate"
-    ).innerText =
-    formatDate(
-        article.published_at
-    );
-
-
-    const text =
-    article.summary || "";
-
-
-    const paragraphs =
-    text
-    .split(/\n+/)
-    .filter(Boolean);
-
-
-    document.getElementById(
-        "modalText"
+      "status"
     ).innerHTML =
-    paragraphs
-    .map(
-        p =>
-        `<p>${escapeHtml(p)}</p>`
-    )
-    .join("");
+      "সংবাদ লোড করা যায়নি। RSS/API ঠিক আছে কি না দেখুন।";
+
+    return;
+
+  }
 
 
-    modal.style.display =
-    "block";
-
-
-    document.body.style.overflow =
-    "hidden";
-
-}
-
-
-function closeModal(){
-
-    document.getElementById(
-        "modal"
-    ).style.display =
+  document.getElementById(
+    "status"
+  ).style.display =
     "none";
 
-
-    document.body.style.overflow =
+  document.getElementById(
+    "content"
+  ).style.display =
     "";
 
-}
 
-
-/* --------------------------------
-   TICKER
--------------------------------- */
-
-function updateTicker(){
-
-    if(!allNews.length){
-
-        return;
-
-    }
-
-
-    const titles =
-    allNews
-    .slice(0,8)
-    .map(
-        item =>
-        item.title
-    )
-    .join(
-        "  •  "
-    );
-
-
-    document.getElementById(
-        "tickerText"
-    ).innerText =
-    titles;
+  render();
 
 }
 
 
-/* --------------------------------
-   DATE
--------------------------------- */
+/* RENDER */
 
-function formatDate(value){
+function render(){
 
-    if(!value){
+  const list =
 
-        return "";
+    activeCategory === "all"
 
-    }
+      ? stories
 
-
-    try{
-
-        return new Date(
-            value
-        ).toLocaleString(
-            "bn-BD",
-            {
-                year:"numeric",
-                month:"long",
-                day:"numeric",
-                hour:"numeric",
-                minute:"2-digit"
-            }
+      : stories.filter(
+          story =>
+            story.cat === activeCategory
         );
 
-    }
 
-    catch(e){
+  const use =
+    list.length
+      ? list
+      : stories;
 
-        return "";
 
-    }
+  renderHero(
+    use[0]
+  );
+
+  renderTrending(
+    use.slice(0,5)
+  );
+
+  renderGrid(
+    use.slice(1)
+  );
+
+
+  document.getElementById(
+    "count"
+  ).textContent =
+    use.length + "টি";
+
+
+  document.querySelector(
+    ".section-title"
+  ).textContent =
+    UI[currentLang].latest;
+
+
+  document.querySelector(
+    ".side h2"
+  ).textContent =
+    "🔥 " +
+    UI[currentLang].trend;
+
+
+  document.querySelector(
+    ".ticker strong"
+  ).textContent =
+    "🔴 " +
+    UI[currentLang].breaking;
+
+
+  document.getElementById(
+    "tickerTrack"
+  ).textContent =
+
+    use
+
+      .slice(0,10)
+
+      .map(
+        story =>
+          story.title
+      )
+
+      .join(" • ");
 
 }
 
 
-/* --------------------------------
-   SECURITY HELPERS
--------------------------------- */
+/* HERO */
 
-function escapeHtml(value){
+function renderHero(story){
 
-    return String(value || "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-
-}
+  if(!story)
+    return;
 
 
-function escapeJs(value){
+  document.getElementById(
+    "hero"
+  ).innerHTML = `
 
-    return String(value || "")
-        .replace(/\\/g,"\\\\")
-        .replace(/'/g,"\\'");
-}
+    <img
+      src="${esc(story.image)}"
+      onerror="this.src='${FALLBACK[0]}'"
+      alt=""
+    >
 
-
-/* --------------------------------
-   CATEGORY BUTTONS
--------------------------------- */
-
-document
-.querySelectorAll("nav button")
-.forEach(button => {
-
-    button.addEventListener(
-        "click",
-        () => {
-
-            document
-            .querySelectorAll(
-                "nav button"
-            )
-            .forEach(
-                b =>
-                b.classList.remove(
-                    "active"
-                )
-            );
-
-
-            button.classList.add(
-                "active"
-            );
-
-
-            currentCategory =
-            button.dataset.category;
-
-
-            renderNews();
-
-        }
-    );
-
-});
-
-
-/* --------------------------------
-   CLOSE MODAL
--------------------------------- */
-
-document
-.getElementById("modal")
-.addEventListener(
-    "click",
-    function(e){
-
-        if(e.target === this){
-
-            closeModal();
-
-        }
-
-    }
-);
-
-
-/* --------------------------------
-   START
--------------------------------- */
-
-loadNews();
-
-
-/* প্রতি 5 মিনিটে নতুন সংবাদ */
-setInterval(
-    loadNews,
-    5 * 60 * 1000
-);
-
-</script>
-
-</body>
-</html>
+    <div
