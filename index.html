@@ -238,6 +238,7 @@ const HIDE_NON_BENGALI = true; // বাংলা ভাষায় ইংর�
 const BN = /[\u0980-\u09FF]/;
 
 function fixCat(a) {
+  if (a.cat_ok) return a.category;
   const l = (a.link || "").toLowerCase();
   const rules = [
     ["aljazeera.com","বিশ্ব"],["bbc.co","বিশ্ব"],["ndtv.com","বিশ্ব"],
