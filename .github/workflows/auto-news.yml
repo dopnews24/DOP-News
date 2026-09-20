@@ -2,16 +2,20 @@ name: DOP News Auto Publisher
 
 on:
   workflow_dispatch:
-
   schedule:
-     - cron: "0 * * * *"
+    - cron: "0 * * * *"
 
 permissions:
   contents: write
 
+concurrency:
+  group: dop-news
+  cancel-in-progress: false
+
 jobs:
   generate-news:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -24,13 +28,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests feedparser openai
+          pip install requests feedparser trafilatura
 
       - name: Generate AI news
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          python scripts/generate_news.py
+          python -u scripts/generate_news.py
 
       - name: Save news.json
         run: |
@@ -43,5 +47,6 @@ jobs:
             echo "No new news"
           else
             git commit -m "Auto update news - $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase origin main
             git push
           fi
