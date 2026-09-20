@@ -153,9 +153,9 @@ footer p{color:#aaa;margin-top:8px}
 </footer>
 
 <div class="modal" id="modal">
-<div class="close" onclick="closeModal()">×</div>
 <div class="modal-box">
-<img id="modalImage" class="modal-img" src="" alt="">
+<span class="close" onclick="closeModal()">&times;</span>
+<img class="modal-img" id="modalImage" alt="">
 <div class="modal-content">
 <h2 id="modalTitle"></h2>
 <div id="modalDescription"></div>
@@ -178,15 +178,15 @@ const TRANSLATIONS = {
     nav: { home:"Home", bangladesh:"Bangladesh", world:"World", politics:"Politics", economy:"Economy", technology:"Technology", sports:"Sports", entertainment:"Entertainment", lifestyle:"Lifestyle" },
     mainTitle: "Top Stories", gridTitle: "Latest News",
     loadingTitle: "Loading news...", loadingSub: "Fetching the latest news",
-    errorTitle: "News not available", errorText: "Please try again later.", retry: "Try Again",
-    breaking: "BREAKING", footerDesc: "Latest national and international news",
+    errorTitle: "Unable to load news", errorText: "Please try again later.", retry: "Retry",
+    breaking: "BREAKING", footerDesc: "Latest national & world news",
     empty: "No news available in this category yet.",
     justNow: "Just now", minAgo: "min ago", hourAgo: "hours ago", dayAgo: "days ago"
   },
   hi: {
     nav: { home:"होम", bangladesh:"बांग्लादेश", world:"विश्व", politics:"राजनीति", economy:"अर्थव्यवस्था", technology:"प्रौद्योगिकी", sports:"खेल", entertainment:"मनोरंजन", lifestyle:"लाइफस्टाइल" },
-    mainTitle: "मुख्य समाचार", gridTitle: "ताज़ा खबरें",
-    loadingTitle: "समाचार लोड हो रहे हैं...", loadingSub: "नवीनतम समाचार लाए जा रहे हैं",
+    mainTitle: "मुख्य समाचार", gridTitle: "ताज़ा समाचार",
+    loadingTitle: "समाचार लोड हो रहे हैं...", loadingSub: "ताज़ा समाचार प्राप्त किए जा रहे हैं",
     errorTitle: "समाचार उपलब्ध नहीं", errorText: "कृपया बाद में पुनः प्रयास करें।", retry: "पुनः प्रयास करें",
     breaking: "ब्रेकिंग", footerDesc: "देश और दुनिया की ताज़ा खबरें",
     empty: "इस श्रेणी में अभी कोई समाचार नहीं है।",
@@ -194,11 +194,11 @@ const TRANSLATIONS = {
   },
   ar: {
     nav: { home:"الرئيسية", bangladesh:"بنغلاديش", world:"العالم", politics:"السياسة", economy:"الاقتصاد", technology:"التكنولوجيا", sports:"الرياضة", entertainment:"الترفيه", lifestyle:"نمط الحياة" },
-    mainTitle: "أبرز الأخبار", gridTitle: "أحدث الأخبار",
-    loadingTitle: "جاري تحميل الأخبار...", loadingSub: "جاري جلب أحدث الأخبار",
-    errorTitle: "الأخبار غير متوفرة", errorText: "يرجى المحاولة لاحقاً.", retry: "حاول مرة أخرى",
-    breaking: "عاجل", footerDesc: "آخر الأخبار المحلية والدولية",
-    empty: "لا توجد أخبار في هذا القسم بعد.",
+    mainTitle: "أهم الأخبار", gridTitle: "آخر الأخبار",
+    loadingTitle: "جاري تحميل الأخبار...", loadingSub: "جاري جلب آخر الأخبار",
+    errorTitle: "تعذر تحميل الأخبار", errorText: "يرجى المحاولة مرة أخرى لاحقاً.", retry: "إعادة المحاولة",
+    breaking: "عاجل", footerDesc: "آخر أخبار البلاد والعالم",
+    empty: "لا توجد أخبار في هذا القسم حتى الآن.",
     justNow: "الآن", minAgo: "دقيقة مضت", hourAgo: "ساعات مضت", dayAgo: "أيام مضت"
   },
   ur: {
