@@ -14,16 +14,43 @@ import feedparser
 # =========================================================
 
 NEWS_FILE = "news.json"
-MAX_PER_FEED = 10
-MAX_TOTAL = 30
+MAX_PER_CATEGORY = 8
+MAX_TOTAL = 60
 
-# ✅ শুধু কাজ করে এমন RSS ফিড
-FEEDS = [
-    {"category": "বাংলাদেশ", "url": "https://www.prothomalo.com/feed"},
-    {"category": "বিশ্ব",    "url": "https://www.prothomalo.com/feed"},
-    {"category": "খেলা",     "url": "https://www.prothomalo.com/feed"},
-    {"category": "প্রযুক্তি", "url": "https://www.prothomalo.com/feed"},
-]
+# ✅ প্রতিটি ক্যাটাগরির জন্য আলাদা RSS (যা কাজ করে)
+FEEDS = {
+    "বাংলাদেশ": [
+        "https://www.prothomalo.com/feed",
+    ],
+    "বিশ্ব": [
+        "https://www.prothomalo.com/world/feed",
+        "https://www.prothomalo.com/feed",
+    ],
+    "রাজনীতি": [
+        "https://www.prothomalo.com/politics/feed",
+        "https://www.prothomalo.com/feed",
+    ],
+    "অর্থনীতি": [
+        "https://www.prothomalo.com/business/feed",
+        "https://www.prothomalo.com/feed",
+    ],
+    "খেলা": [
+        "https://www.prothomalo.com/sports/feed",
+        "https://www.prothomalo.com/feed",
+    ],
+    "প্রযুক্তি": [
+        "https://www.prothomalo.com/technology/feed",
+        "https://www.prothomalo.com/feed",
+    ],
+    "বিনোদন": [
+        "https://www.prothomalo.com/entertainment/feed",
+        "https://www.prothomalo.com/feed",
+    ],
+    "লাইফস্টাইল": [
+        "https://www.prothomalo.com/lifestyle/feed",
+        "https://www.prothomalo.com/feed",
+    ],
+}
 
 
 # =========================================================
@@ -76,18 +103,17 @@ def save_news(data):
 # =========================================================
 
 def get_rss_items(url):
-    print("RSS:", url)
     try:
         r = requests.get(url, timeout=30, headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/120.0.0.0 Safari/537.36"
         })
-        r.raise_for_status()
+        if r.status_code != 200:
+            return []
         feed = feedparser.parse(r.content)
-        print("  items:", len(feed.entries))
         return feed.entries
-    except Exception as e:
-        print("  ERROR:", e)
+    except Exception:
         return []
 
 
@@ -106,8 +132,7 @@ def extract_full_content(entry):
     if len(summary) > 200:
         return clean_text(summary)
 
-    desc = entry.get("description") or ""
-    return clean_text(desc)
+    return clean_text(entry.get("description") or "")
 
 
 def extract_image(entry):
@@ -146,72 +171,86 @@ def extract_image(entry):
 
 def main():
     print("=" * 40)
-    print("DOP NEWS 24 — Free Publisher")
+    print("DOP NEWS 24 — Multi-Category Publisher")
     print("=" * 40)
 
     data = load_news()
     old_articles = data.get("articles", [])
-    seen_ids = {a.get("source_id") for a in old_articles if a.get("source_id")}
 
-    # সব RSS থেকে সব entry সংগ্রহ
-    all_entries = []
-    for feed in FEEDS:
-        entries = get_rss_items(feed["url"])
-        for e in entries:
-            all_entries.append((feed["category"], e))
-
-    # ডুপ্লিকেট সরান (একই link একবারই)
-    unique = []
-    seen_links = set()
-    for cat, e in all_entries:
-        link = e.get("link", "")
-        if not link or link in seen_links:
-            continue
-        seen_links.add(link)
-        unique.append((cat, e))
-
-    print("Unique entries:", len(unique))
+    # সব ব্যবহৃত source_id এবং link সংগ্রহ
+    used_source_ids = set()
+    used_links = set()
+    for a in old_articles:
+        if a.get("source_id"):
+            used_source_ids.add(a["source_id"])
+        if a.get("link"):
+            used_links.add(a["link"])
 
     new_articles = []
-    for cat, entry in unique:
-        if len(new_articles) >= MAX_TOTAL:
-            break
 
-        title = clean_text(entry.get("title", ""))
-        content = extract_full_content(entry)
-        link = entry.get("link", "")
+    for category, feed_urls in FEEDS.items():
+        print("\nCATEGORY:", category)
+        cat_count = 0
 
-        if not title or not content or len(content) < 100:
-            continue
+        for feed_url in feed_urls:
+            if cat_count >= MAX_PER_CATEGORY:
+                break
 
-        sid = make_id(title + "|" + link)
-        if sid in seen_ids:
-            continue
+            entries = get_rss_items(feed_url)
+            for entry in entries:
+                if cat_count >= MAX_PER_CATEGORY:
+                    break
 
-        summary = content[:220].strip()
-        if len(content) > 220:
-            summary += "..."
+                title = clean_text(entry.get("title", ""))
+                link = entry.get("link", "")
+                content = extract_full_content(entry)
 
-        image = extract_image(entry)
+                if not title or not link or not content or len(content) < 80:
+                    continue
 
-        new_articles.append({
-            "id": make_id(sid + str(datetime.now())),
-            "source_id": sid,
-            "category": cat,
-            "title": title,
-            "summary": summary,
-            "content": content,
-            "image": image,
-            "published_at": datetime.now(timezone.utc).isoformat()
-        })
-        seen_ids.add(sid)
+                # ডুপ্লিকেট চেক
+                if link in used_links:
+                    continue
 
-    print("New articles:", len(new_articles))
+                sid = make_id(title + "|" + link)
+                if sid in used_source_ids:
+                    continue
 
-    # নতুন + পুরোনো
-    combined = new_articles + old_articles
-    # MAX_TOTAL এ সীমাবদ্ধ
-    data["articles"] = combined[:MAX_TOTAL]
+                summary = content[:220].strip()
+                if len(content) > 220:
+                    summary += "..."
+
+                image = extract_image(entry)
+
+                new_articles.append({
+                    "id": make_id(sid + str(datetime.now())),
+                    "source_id": sid,
+                    "category": category,
+                    "title": title,
+                    "summary": summary,
+                    "content": content,
+                    "image": image,
+                    "link": link,
+                    "published_at": datetime.now(timezone.utc).isoformat()
+                })
+
+                used_source_ids.add(sid)
+                used_links.add(link)
+                cat_count += 1
+
+                if len(new_articles) >= MAX_TOTAL:
+                    break
+
+            if len(new_articles) >= MAX_TOTAL:
+                break
+
+        print("  Added:", cat_count)
+
+    print("\nNew articles:", len(new_articles))
+
+    # নতুন + পুরোনো, MAX_TOTAL এ সীমাবদ্ধ
+    combined = (new_articles + old_articles)[:MAX_TOTAL]
+    data["articles"] = combined
     save_news(data)
     print("Done.")
 
