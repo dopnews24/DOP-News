@@ -9,36 +9,36 @@ from datetime import datetime, timezone
 import requests
 import feedparser
 
-try:
-    from openai import OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    HAS_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
-except Exception as e:
-    client = None
-    HAS_OPENAI = False
-    print("Warning: OpenAI import failed:", e)
-
-if not HAS_OPENAI:
-    print("Warning: OpenAI unavailable (key missing or package not installed)")
-
 # =========================================================
 # SETTINGS
 # =========================================================
 
 NEWS_FILE = "news.json"
-MAX_TOTAL = 50
-MAX_BD_PER_RUN = 8
-MAX_WORLD_PER_RUN = 14
+MAX_TOTAL = 80
+MAX_BD_PER_RUN = 4        # ফ্রি সীমার জন্য কম রাখা হয়েছে, বাড়াতে পারেন
+MAX_WORLD_PER_RUN = 8
+FALLBACK_CHARS = 500      # AI না চললে বাংলা খবরের যতটুকু অংশ রাখা হবে
+
+GEMINI_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODELS = [
+    m.strip()
+    for m in (os.getenv("GEMINI_MODEL") or "gemini-3.1-flash-lite,gemini-3-flash-preview,gemini-2.5-flash").split(",")
+    if m.strip()
+]
+AI_DELAY = float(os.getenv("AI_DELAY") or "7")   # দুই রিকোয়েস্টের মাঝে সেকেন্ড
+AI_DISABLED = not GEMINI_KEY
+ACTIVE_MODEL = ""
+
+if AI_DISABLED:
+    print("Warning: GEMINI_API_KEY missing, AI disabled")
 
 BD_FEEDS = [
     "https://www.prothomalo.com/feed",
-    "https://www.prothomalo.com/bangladesh/feed",
 ]
 
 WORLD_FEEDS = [
     "https://feeds.bbci.co.uk/news/world/rss.xml",
     "https://www.aljazeera.com/xml/rss/all.xml",
-    "https://rss.cnn.com/rss/edition_world.rss",
     "https://feeds.feedburner.com/ndtvnews-world-news",
 ]
 
@@ -195,13 +195,71 @@ def detect_category(title, content, default):
                 return cat
     return default
 
+def parse_json_text(text):
+    text = (text or "").strip()
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.M).strip()
+    return json.loads(text)
+
 # =========================================================
-# AI REWRITE (সবসময় বাংলায়)
+# GEMINI (ফ্রি AI)
 # =========================================================
+
+def call_gemini(prompt):
+    """সফল হলে উত্তরের লেখা ফেরত দেয়, নাহলে None"""
+    global AI_DISABLED, ACTIVE_MODEL
+    if AI_DISABLED:
+        return None
+
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.4,
+            "maxOutputTokens": 4096,
+            "responseMimeType": "application/json",
+        },
+    }
+    headers = {"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"}
+    models = [ACTIVE_MODEL] if ACTIVE_MODEL else GEMINI_MODELS
+
+    for model in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        for attempt in range(2):
+            try:
+                r = requests.post(url, headers=headers, json=body, timeout=90)
+            except Exception as e:
+                print("    → Network error:", e)
+                time.sleep(3)
+                continue
+
+            if r.status_code == 200:
+                ACTIVE_MODEL = model
+                try:
+                    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                except Exception:
+                    print("    → খালি বা ব্লক করা উত্তর")
+                    return None
+
+            print(f"    → Gemini {r.status_code} ({model}): {r.text[:160]}")
+
+            if r.status_code == 429:
+                if attempt == 0:
+                    time.sleep(35)   # প্রতি মিনিটের সীমা হলে অপেক্ষা
+                    continue
+                AI_DISABLED = True
+                print("    → সীমা শেষ, এই রানে AI বন্ধ")
+                return None
+            if r.status_code in (401, 403):
+                AI_DISABLED = True
+                print("    → key সমস্যা, AI বন্ধ")
+                return None
+            if r.status_code in (400, 404):
+                break  # পরের মডেল চেষ্টা
+            time.sleep(4)
+    return None
 
 def rewrite_with_ai(title, content, is_english):
     """সফল হলে (বাংলা শিরোনাম, বাংলা লেখা, ক্যাটাগরি) ফেরত দেয়, ব্যর্থ হলে None"""
-    if not HAS_OPENAI:
+    if AI_DISABLED:
         return None
 
     src = "ইংরেজি" if is_english else "বাংলা"
@@ -210,29 +268,25 @@ def rewrite_with_ai(title, content, is_english):
         "নিয়ম:\n"
         "- শুধু বাংলায় লেখো। বিদেশি নাম ও সংস্থার নাম বাংলা অক্ষরে লেখো (যেমন: ট্রাম্প, বিবিসি)\n"
         "- শুধু নিচের তথ্য ব্যবহার করো। নিজে থেকে কোনো তথ্য, সংখ্যা বা উদ্ধৃতি যোগ করবে না\n"
-        "- মূল লেখার বাক্য হুবহু কপি করবে না\n"
+        "- মূল লেখার বাক্য হুবহু কপি করবে না, নিজের ভাষায় লিখবে\n"
         "- শিরোনাম সর্বোচ্চ ১৬ শব্দ\n"
-        "- মূল লেখা ছোট হলে ২-৪ বাক্যে শেষ করো। বড় হলে ১২০-২২০ শব্দ\n"
+        "- মূল লেখা বড় হলে গুরুত্বপূর্ণ সব তথ্যসহ ২০০-৩৫০ শব্দে অনুচ্ছেদ ভাগ করে লেখো\n"
+        "- মূল লেখা ছোট হলে যতটুকু তথ্য আছে ততটুকুই ২-৪ বাক্যে লেখো, বাড়িয়ে লিখবে না\n"
         "- category এই তালিকা থেকে ঠিক একটি: " + ", ".join(ALLOWED_CATEGORIES) + "\n\n"
         "শুধু JSON দাও, এই ফরম্যাটে:\n"
         '{"title": "...", "content": "...", "category": "..."}\n\n'
         f"আসল শিরোনাম: {title}\n\n"
-        f"আসল খবর:\n{content[:1500]}"
+        f"আসল খবর:\n{content[:3500]}"
     )
 
     for attempt in range(2):
+        text = call_gemini(prompt)
+        if text is None:
+            if AI_DISABLED:
+                return None
+            continue
         try:
-            resp = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "তুমি শুধু বাংলায় লেখো এবং শুধু JSON উত্তর দাও।"},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.4,
-                max_tokens=900,
-                response_format={"type": "json_object"},
-            )
-            data = json.loads(resp.choices[0].message.content)
+            data = parse_json_text(text)
             new_title = clean_text(data.get("title", ""))
             new_content = clean_text(data.get("content", ""))
             cat = (data.get("category") or "").strip()
@@ -240,15 +294,14 @@ def rewrite_with_ai(title, content, is_english):
                 return new_title, new_content, (cat if cat in ALLOWED_CATEGORIES else "")
             print("    → বাংলা যাচাই ব্যর্থ, আবার চেষ্টা")
         except Exception as e:
-            print("    → AI Error:", e)
-            time.sleep(2)
+            print("    → JSON পড়া যায়নি:", e)
     return None
 
 # =========================================================
 # COLLECT
 # =========================================================
 
-def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_links):
+def collect(feed_urls, limit, per_feed, is_english, default_cat, min_len, used_ids, used_links):
     items = []
     for feed_url in feed_urls:
         if len(items) >= limit:
@@ -264,7 +317,7 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_
             link = entry.get("link", "")
             content = extract_full_content(entry)
 
-            if not title or not link or len(content) < 80:
+            if not title or not link or len(content) < min_len:
                 continue
             if "/video/" in link or any(w in title for w in SKIP_TITLE_WORDS):
                 continue
@@ -274,13 +327,16 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_
                 continue
 
             print(f"    Rewriting: {title[:50]}...")
+            used_ai = not AI_DISABLED
             result = rewrite_with_ai(title, content, is_english)
+            if used_ai:
+                time.sleep(AI_DELAY)
 
             if result:
                 bn_title, bn_content, ai_cat = result
             elif not is_english:
                 # AI না চললে বাংলা খবরের শুধু শিরোনাম ও ছোট অংশ রাখা হয়
-                bn_title, bn_content, ai_cat = title, content[:250].strip() + "...", ""
+                bn_title, bn_content, ai_cat = title, content[:FALLBACK_CHARS].strip() + "...", ""
             else:
                 print("    → বাদ (বাংলা রিরাইট হয়নি)")
                 continue
@@ -307,7 +363,6 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_
 
             used_ids.add(sid)
             used_links.add(link)
-            time.sleep(1.2)  # rate limit
     return items
 
 # =========================================================
@@ -316,25 +371,25 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_
 
 def main():
     print("=" * 50)
-    print("DOP NEWS 24 — AI Bengali News Publisher")
+    print("DOP NEWS 24 — AI Bengali News Publisher (Gemini)")
     print("=" * 50)
 
     data = load_news()
     all_old = data.get("articles", [])
 
-    # শুধু নতুন নিয়মে বানানো ও বাংলা শিরোনামের খবর রাখা হয়
-    old_articles = [a for a in all_old if a.get("cat_ok") and is_bengali(a.get("title", ""))]
+    # শুধু ইংরেজি শিরোনামের পুরোনো খবর বাদ, বাকি সব থাকে
+    old_articles = [a for a in all_old if is_bengali(a.get("title", ""))]
     print(f"Old articles kept: {len(old_articles)} / {len(all_old)}")
 
-    used_ids = {a["source_id"] for a in old_articles if a.get("source_id")}
-    used_links = {a["link"] for a in old_articles if a.get("link")}
+    used_ids = {a["source_id"] for a in all_old if a.get("source_id")}
+    used_links = {a["link"] for a in all_old if a.get("link")}
 
     print("\n[1] Bangladesh News...")
-    bd = collect(BD_FEEDS, MAX_BD_PER_RUN, 15, False, "বাংলাদেশ", used_ids, used_links)
+    bd = collect(BD_FEEDS, MAX_BD_PER_RUN, 20, False, "বাংলাদেশ", 60, used_ids, used_links)
     print(f"  Added Bangladesh: {len(bd)}")
 
     print("\n[2] World News...")
-    world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, 8, True, "বিশ্ব", used_ids, used_links)
+    world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, 10, True, "বিশ্ব", 80, used_ids, used_links)
     print(f"  Added World: {len(world)}")
 
     combined = bd + world + old_articles
