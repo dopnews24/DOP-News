@@ -18,7 +18,8 @@ header{background:#111;color:#fff;position:sticky;top:0;z-index:1000}
 .language{background:#222;color:#fff;border:1px solid #444;padding:9px 12px;border-radius:5px;cursor:pointer}
 
 nav{background:#222;border-top:1px solid #333}
-.nav-inner{display:flex;overflow-x:auto}
+.nav-inner{display:flex;overflow-x:auto;scrollbar-width:none}
+.nav-inner::-webkit-scrollbar{display:none}
 .nav-inner a{color:#fff;padding:14px 18px;white-space:nowrap;font-weight:bold;font-size:14px;cursor:pointer}
 .nav-inner a:hover,.nav-inner a.active{background:#e50914}
 
@@ -69,6 +70,8 @@ main{padding:25px 0 50px}
 footer{background:#111;color:#fff;padding:35px 0;margin-top:30px;text-align:center}
 footer p{color:#aaa;margin-top:8px}
 
+.empty{padding:30px;text-align:center;color:#888;background:#fff;border-radius:8px}
+
 @media(max-width:900px){
 .news-grid{grid-template-columns:repeat(2,1fr)}
 .featured{grid-template-columns:1fr}
@@ -100,8 +103,12 @@ footer p{color:#aaa;margin-top:8px}
 <a data-cat="হোম" class="active">হোম</a>
 <a data-cat="বাংলাদেশ">বাংলাদেশ</a>
 <a data-cat="বিশ্ব">বিশ্ব</a>
-<a data-cat="খেলা">খেলা</a>
+<a data-cat="রাজনীতি">রাজনীতি</a>
+<a data-cat="অর্থনীতি">অর্থনীতি</a>
 <a data-cat="প্রযুক্তি">প্রযুক্তি</a>
+<a data-cat="খেলা">খেলা</a>
+<a data-cat="বিনোদন">বিনোদন</a>
+<a data-cat="লাইফস্টাইল">লাইফস্টাইল</a>
 </div>
 </nav>
 </header>
@@ -127,7 +134,7 @@ footer p{color:#aaa;margin-top:8px}
 </div>
 
 <div id="newsArea" style="display:none">
-<div class="section-title">প্রধান সংবাদ</div>
+<div class="section-title" id="mainTitle">প্রধান সংবাদ</div>
 <div class="featured">
 <div class="featured-main" id="featuredMain"></div>
 <div class="side-news" id="sideNews"></div>
@@ -191,7 +198,7 @@ async function loadNews(){
         if(articles.length === 0) throw new Error("খালি");
 
         ALL_ARTICLES = articles;
-        renderNews(articles);
+        showCategory("হোম", "প্রধান সংবাদ", "সর্বশেষ সংবাদ");
 
         loading.style.display = "none";
         newsArea.style.display = "block";
@@ -208,19 +215,30 @@ async function loadNews(){
     }
 }
 
-function renderNews(articles){
+function showCategory(cat, mainTitle, gridTitle){
     const fm = document.getElementById("featuredMain");
     const sn = document.getElementById("sideNews");
     const ng = document.getElementById("newsGrid");
 
-    if(!articles || articles.length === 0){
-        fm.innerHTML = "<p style='padding:20px'>এই বিভাগে কোনো সংবাদ নেই।</p>";
+    document.getElementById("mainTitle").textContent = mainTitle;
+    document.getElementById("gridTitle").textContent = gridTitle;
+
+    let list;
+    if(cat === "হোম"){
+        list = ALL_ARTICLES;
+    }else{
+        list = ALL_ARTICLES.filter(a => a.category === cat);
+    }
+
+    if(!list || list.length === 0){
+        fm.innerHTML = "";
         sn.innerHTML = "";
-        ng.innerHTML = "";
+        ng.innerHTML = `<div class="empty" style="grid-column:1/-1">এই বিভাগে এখনো কোনো সংবাদ নেই।</div>`;
         return;
     }
 
-    const main = articles[0];
+    // Featured
+    const main = list[0];
     fm.innerHTML = `
         <img src="${escapeHtml(main.image || '')}" alt="">
         <div class="featured-text">
@@ -230,25 +248,35 @@ function renderNews(articles){
         </div>`;
     fm.onclick = () => openModal(main);
 
-    const side = articles.slice(1,5);
-    sn.innerHTML = side.map(a => `
-        <div class="side-card">
-            <h3>${escapeHtml(a.title)}</h3>
-            <div class="news-time">${timeAgo(a.published_at)}</div>
-        </div>`).join("");
-    sn.querySelectorAll(".side-card").forEach((el,i) => el.onclick = () => openModal(side[i]));
-
-    const grid = articles.slice(5);
-    ng.innerHTML = grid.map(a => `
-        <div class="news-card">
-            <img class="news-image" src="${escapeHtml(a.image || '')}" alt="">
-            <div class="news-content">
-                <div class="news-title">${escapeHtml(a.title)}</div>
-                <div class="news-description">${escapeHtml((a.summary || "").slice(0,120))}...</div>
+    // Side
+    const side = list.slice(1,5);
+    if(side.length === 0){
+        sn.innerHTML = "";
+    }else{
+        sn.innerHTML = side.map(a => `
+            <div class="side-card">
+                <h3>${escapeHtml(a.title)}</h3>
                 <div class="news-time">${timeAgo(a.published_at)}</div>
-            </div>
-        </div>`).join("");
-    ng.querySelectorAll(".news-card").forEach((el,i) => el.onclick = () => openModal(grid[i]));
+            </div>`).join("");
+        sn.querySelectorAll(".side-card").forEach((el,i) => el.onclick = () => openModal(side[i]));
+    }
+
+    // Grid
+    const grid = list.slice(5);
+    if(grid.length === 0){
+        ng.innerHTML = "";
+    }else{
+        ng.innerHTML = grid.map(a => `
+            <div class="news-card">
+                <img class="news-image" src="${escapeHtml(a.image || '')}" alt="">
+                <div class="news-content">
+                    <div class="news-title">${escapeHtml(a.title)}</div>
+                    <div class="news-description">${escapeHtml((a.summary || "").slice(0,120))}...</div>
+                    <div class="news-time">${timeAgo(a.published_at)}</div>
+                </div>
+            </div>`).join("");
+        ng.querySelectorAll(".news-card").forEach((el,i) => el.onclick = () => openModal(grid[i]));
+    }
 }
 
 function openModal(a){
@@ -281,10 +309,11 @@ document.querySelectorAll("#navInner a").forEach(link => {
         document.querySelectorAll("#navInner a").forEach(l => l.classList.remove("active"));
         link.classList.add("active");
         const cat = link.getAttribute("data-cat");
+
         if(cat === "হোম"){
-            renderNews(ALL_ARTICLES);
+            showCategory("হোম", "প্রধান সংবাদ", "সর্বশেষ সংবাদ");
         }else{
-            renderNews(ALL_ARTICLES.filter(a => a.category === cat));
+            showCategory(cat, cat, cat + " — সর্বশেষ সংবাদ");
         }
         window.scrollTo({top:0,behavior:"smooth"});
     });
@@ -294,4 +323,3 @@ loadNews();
 </script>
 </body>
 </html>
- 
