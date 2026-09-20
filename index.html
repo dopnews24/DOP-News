@@ -27,7 +27,7 @@ nav{background:#222;border-top:1px solid #333}
 .breaking{background:#e50914;color:#fff;overflow:hidden}
 .breaking-inner{display:flex;min-height:42px;align-items:center}
 .breaking-label{background:#b00008;padding:11px 15px;font-weight:bold;white-space:nowrap}
-.ticker{padding-left:20px;white-space:nowrap;animation:ticker 30s linear infinite}
+.ticker{padding-left:20px;white-space:nowrap;animation:ticker 60s linear infinite}
 body.rtl .ticker{padding-left:0;padding-right:20px}
 @keyframes ticker{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 body.rtl .ticker{animation-name:ticker-rtl}
@@ -56,7 +56,7 @@ body.rtl .section-title{border-left:none;border-right:6px solid #e50914;padding-
 
 .featured{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:30px}
 .featured-main{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px #0001;cursor:pointer}
-.featured-main img{width:100%;height:400px;object-fit:cover}
+.featured-main img{width:100%;height:400px;object-fit:cover;display:block}
 .featured-text{padding:20px}
 .featured-text h1{font-size:32px;line-height:1.25;margin-bottom:12px}
 
@@ -64,9 +64,11 @@ body.rtl .section-title{border-left:none;border-right:6px solid #e50914;padding-
 .side-card{background:#fff;border-radius:8px;padding:15px;box-shadow:0 2px 8px #0001;cursor:pointer}
 .side-card h3{font-size:17px;line-height:1.4}
 
+.load-more{display:none;margin:25px auto 0;border:0;background:#e50914;color:#fff;padding:13px 30px;border-radius:5px;cursor:pointer;font-weight:bold;font-size:15px}
+
 .modal{display:none;position:fixed;inset:0;background:#000b;z-index:2000;overflow:auto;padding:30px 15px}
 .modal-box{max-width:850px;background:#fff;margin:auto;border-radius:10px;overflow:hidden;position:relative}
-.modal-img{width:100%;max-height:450px;object-fit:cover}
+.modal-img{width:100%;max-height:450px;object-fit:cover;display:block}
 .modal-content{padding:25px}
 .modal-content h2{font-size:30px;line-height:1.3;margin-bottom:15px}
 .modal-content p{font-size:17px;line-height:1.9;color:#333;white-space:pre-line}
@@ -141,6 +143,7 @@ footer p{color:#aaa;margin-top:8px}
 </div>
 <div class="section-title" id="gridTitle">সর্বশেষ সংবাদ</div>
 <div class="news-grid" id="newsGrid"></div>
+<button class="load-more" id="moreBtn">আরও দেখুন</button>
 </div>
 </main>
 
@@ -172,6 +175,7 @@ const TRANSLATIONS = {
     errorTitle: "সংবাদ পাওয়া যাচ্ছে না", errorText: "কিছুক্ষণ পর আবার চেষ্টা করুন।", retry: "আবার চেষ্টা করুন",
     breaking: "ব্রেকিং", footerDesc: "সর্বশেষ দেশ ও বিশ্বের সংবাদ",
     empty: "এই বিভাগে এখনো কোনো সংবাদ নেই।",
+    more: "আরও দেখুন", original: "মূল সংবাদ",
     justNow: "এইমাত্র", minAgo: "মিনিট আগে", hourAgo: "ঘণ্টা আগে", dayAgo: "দিন আগে"
   },
   en: {
@@ -181,6 +185,7 @@ const TRANSLATIONS = {
     errorTitle: "Unable to load news", errorText: "Please try again later.", retry: "Retry",
     breaking: "BREAKING", footerDesc: "Latest national & world news",
     empty: "No news available in this category yet.",
+    more: "Load more", original: "Original source",
     justNow: "Just now", minAgo: "min ago", hourAgo: "hours ago", dayAgo: "days ago"
   },
   hi: {
@@ -190,6 +195,7 @@ const TRANSLATIONS = {
     errorTitle: "समाचार उपलब्ध नहीं", errorText: "कृपया बाद में पुनः प्रयास करें।", retry: "पुनः प्रयास करें",
     breaking: "ब्रेकिंग", footerDesc: "देश और दुनिया की ताज़ा खबरें",
     empty: "इस श्रेणी में अभी कोई समाचार नहीं है।",
+    more: "और देखें", original: "मूल स्रोत",
     justNow: "अभी", minAgo: "मिनट पहले", hourAgo: "घंटे पहले", dayAgo: "दिन पहले"
   },
   ar: {
@@ -199,6 +205,7 @@ const TRANSLATIONS = {
     errorTitle: "تعذر تحميل الأخبار", errorText: "يرجى المحاولة مرة أخرى لاحقاً.", retry: "إعادة المحاولة",
     breaking: "عاجل", footerDesc: "آخر أخبار البلاد والعالم",
     empty: "لا توجد أخبار في هذا القسم حتى الآن.",
+    more: "عرض المزيد", original: "المصدر الأصلي",
     justNow: "الآن", minAgo: "دقيقة مضت", hourAgo: "ساعات مضت", dayAgo: "أيام مضت"
   },
   ur: {
@@ -208,6 +215,7 @@ const TRANSLATIONS = {
     errorTitle: "خبریں دستیاب نہیں", errorText: "براہ کرم بعد میں دوبارہ کوشش کریں۔", retry: "دوبارہ کوشش کریں",
     breaking: "بریکنگ", footerDesc: "ملک اور دنیا کی تازہ ترین خبریں",
     empty: "اس زمرے میں ابھی کوئی خبر نہیں ہے۔",
+    more: "مزید دیکھیں", original: "اصل ماخذ",
     justNow: "ابھی", minAgo: "منٹ پہلے", hourAgo: "گھنٹے پہلے", dayAgo: "دن پہلے"
   },
   zh: {
@@ -217,6 +225,7 @@ const TRANSLATIONS = {
     errorTitle: "无法获取新闻", errorText: "请稍后再试。", retry: "重试",
     breaking: "突发", footerDesc: "最新国内外新闻",
     empty: "此分类暂无新闻。",
+    more: "加载更多", original: "原文来源",
     justNow: "刚刚", minAgo: "分钟前", hourAgo: "小时前", dayAgo: "天前"
   }
 };
@@ -236,6 +245,11 @@ const CAT_KEY = {
 
 const HIDE_NON_BENGALI = true; // বাংলা ভাষায় ইংরেজি শিরোনামের খবর লুকাতে true, দেখাতে false
 const BN = /[\u0980-\u09FF]/;
+const PAGE_SIZE = 24;          // "আরও দেখুন" চাপলে প্রতিবার কয়টি খবর বাড়বে
+
+function getLang() {
+  try { return localStorage.getItem("dop_lang") || "bn"; } catch (e) { return "bn"; }
+}
 
 function fixCat(a) {
   if (a.cat_ok) return a.category;
@@ -250,9 +264,24 @@ function fixCat(a) {
   return a.category || "বাংলাদেশ";
 }
 
+// বিশ্ব ও বাংলাদেশ ট্যাব উৎস (region) দেখে ঠিক হয়, ক্যাটাগরি দেখে নয়।
+// তাই বিশ্বের রাজনীতি/অর্থনীতির খবরও "বিশ্ব" ট্যাবে আসবে।
+function isWorld(a) {
+  if (a.region) return a.region === "world";
+  return fixCat(a) === "বিশ্ব" || /\/world\//i.test(a.link || "");
+}
+
+function inCategory(a, cat) {
+  if (cat === "হোম") return true;
+  if (cat === "বিশ্ব") return isWorld(a);
+  if (cat === "বাংলাদেশ") return a.region ? a.region === "bd" : (!isWorld(a) && fixCat(a) === "বাংলাদেশ");
+  return fixCat(a) === cat;
+}
+
 let ALL_ARTICLES = [];
-let currentLang = localStorage.getItem("dop_lang") || "bn";
+let currentLang = getLang();
 let currentCategory = "হোম";
+let shownCount = PAGE_SIZE;
 
 function t(key) {
   return TRANSLATIONS[currentLang]?.[key] || key;
@@ -265,6 +294,7 @@ function navText(cat) {
 
 function timeAgo(dateStr) {
   const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (isNaN(diff)) return "";
   if (diff < 60) return t("justNow");
   if (diff < 3600) return Math.floor(diff / 60) + " " + t("minAgo");
   if (diff < 86400) return Math.floor(diff / 3600) + " " + t("hourAgo");
@@ -274,6 +304,17 @@ function timeAgo(dateStr) {
 function escapeHtml(str) {
   if (!str) return "";
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function safeUrl(u) {
+  return /^https?:\/\//i.test(u || "") ? u : "";
+}
+
+// ছবি না থাকলে বা লোড না হলে ছবির জায়গাটাই সরে যায়, ভাঙা আইকন দেখা যায় না
+function imgTag(cls, src) {
+  const s = safeUrl(src);
+  if (!s) return "";
+  return `<img ${cls ? `class="${cls}" ` : ""}src="${escapeHtml(s)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`;
 }
 
 function applyLanguage() {
@@ -294,6 +335,7 @@ function applyLanguage() {
       document.querySelectorAll("#navInner a").forEach(l => l.classList.remove("active"));
       this.classList.add("active");
       currentCategory = this.getAttribute("data-cat");
+      shownCount = PAGE_SIZE;
       showCategory(currentCategory);
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -306,6 +348,7 @@ function applyLanguage() {
   document.getElementById("errorText").textContent = tr.errorText;
   document.getElementById("retryBtn").textContent = tr.retry;
   document.getElementById("footerDesc").textContent = tr.footerDesc;
+  document.getElementById("moreBtn").textContent = tr.more;
 
   if (ALL_ARTICLES.length > 0) {
     showCategory(currentCategory);
@@ -317,6 +360,7 @@ function showCategory(cat) {
   const fm = document.getElementById("featuredMain");
   const sn = document.getElementById("sideNews");
   const ng = document.getElementById("newsGrid");
+  const more = document.getElementById("moreBtn");
 
   if (cat === "হোম") {
     document.getElementById("mainTitle").textContent = tr.mainTitle;
@@ -327,19 +371,20 @@ function showCategory(cat) {
     document.getElementById("gridTitle").textContent = catName + " — " + tr.gridTitle;
   }
 
-  let base = ALL_ARTICLES.filter(a => !HIDE_NON_BENGALI || currentLang !== "bn" || BN.test(a.title));
-  let list = (cat === "হোম") ? base : base.filter(a => fixCat(a) === cat);
+  const base = ALL_ARTICLES.filter(a => !HIDE_NON_BENGALI || currentLang !== "bn" || BN.test(a.title));
+  const list = base.filter(a => inCategory(a, cat));
 
   if (!list || list.length === 0) {
     fm.innerHTML = "";
     sn.innerHTML = "";
     ng.innerHTML = `<div class="empty" style="grid-column:1/-1">${tr.empty}</div>`;
+    more.style.display = "none";
     return;
   }
 
   const main = list[0];
   fm.innerHTML = `
-    <img src="${escapeHtml(main.image || '')}" alt="">
+    ${imgTag("", main.image)}
     <div class="featured-text">
       <h1>${escapeHtml(main.title)}</h1>
       <p class="news-description">${escapeHtml(main.summary || "")}</p>
@@ -357,29 +402,47 @@ function showCategory(cat) {
     el.onclick = function() { openModal(side[i]); };
   });
 
-  const grid = list.slice(5);
+  const gridAll = list.slice(5);
+  const grid = gridAll.slice(0, shownCount);
   ng.innerHTML = grid.map(a => `
     <div class="news-card">
-      <img class="news-image" src="${escapeHtml(a.image || '')}" alt="">
+      ${imgTag("news-image", a.image)}
       <div class="news-content">
         <div class="news-title">${escapeHtml(a.title)}</div>
-        <div class="news-description">${escapeHtml((a.summary || "").slice(0, 120))}...</div>
+        <div class="news-description">${escapeHtml((a.summary || "").slice(0, 120))}${(a.summary || "").length > 120 ? "..." : ""}</div>
         <div class="news-time">${timeAgo(a.published_at)}</div>
       </div>
     </div>`).join("");
   ng.querySelectorAll(".news-card").forEach((el, i) => {
     el.onclick = function() { openModal(grid[i]); };
   });
+
+  more.style.display = gridAll.length > shownCount ? "block" : "none";
 }
 
+document.getElementById("moreBtn").addEventListener("click", function() {
+  shownCount += PAGE_SIZE;
+  showCategory(currentCategory);
+});
+
 function openModal(a) {
-  document.getElementById("modalImage").src = a.image || "";
+  const img = document.getElementById("modalImage");
+  const s = safeUrl(a.image);
+  img.style.display = s ? "block" : "none";
+  img.src = s;
   document.getElementById("modalTitle").textContent = a.title;
+
+  const link = safeUrl(a.link);
+  const srcHtml = link
+    ? `<p style="margin-top:12px;font-size:14px"><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" style="color:#e50914;font-weight:bold">${escapeHtml(t("original"))}${a.source ? ": " + escapeHtml(a.source) : ""} ↗</a></p>`
+    : "";
+
   document.getElementById("modalDescription").innerHTML = `
     <p>${escapeHtml(a.content || a.summary || "")}</p>
     <p style="margin-top:20px;color:#888;font-size:14px">
       ${escapeHtml(fixCat(a))} • ${timeAgo(a.published_at)}
-    </p>`;
+    </p>
+    ${srcHtml}`;
   document.getElementById("modal").style.display = "block";
   document.body.style.overflow = "hidden";
 }
@@ -389,6 +452,9 @@ function closeModal() {
   document.body.style.overflow = "";
 }
 
+document.getElementById("modalImage").addEventListener("error", function() {
+  this.style.display = "none";
+});
 document.getElementById("modal").addEventListener("click", function(e) {
   if (e.target.id === "modal") closeModal();
 });
@@ -398,7 +464,7 @@ document.addEventListener("keydown", function(e) {
 
 document.getElementById("language").addEventListener("change", function() {
   currentLang = this.value;
-  localStorage.setItem("dop_lang", currentLang);
+  try { localStorage.setItem("dop_lang", currentLang); } catch (e) {}
   applyLanguage();
 });
 
@@ -425,7 +491,7 @@ async function loadNews() {
     newsArea.style.display = "block";
 
     document.getElementById("ticker").textContent =
-      articles.filter(a => BN.test(a.title)).slice(0, 6).map(a => a.title).join("  •  ");
+      articles.filter(a => BN.test(a.title)).slice(0, 8).map(a => a.title).join("  •  ");
 
   } catch (err) {
     console.error(err);
