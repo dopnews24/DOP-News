@@ -158,57 +158,67 @@ def detect_category(title, content, default="বিশ্ব"):
 def rewrite_to_bengali(title, content):
     """OpenAI দিয়ে ইংরেজি নিউজ বাংলায় রিরাইট করে"""
     if not HAS_OPENAI or not os.getenv("OPENAI_API_KEY"):
-        return title, content[:800]
+        print("    → OpenAI নেই, আসল টেক্সট রাখা হচ্ছে")
+        return title, content[:900]
 
     try:
-        prompt = f"""তুমি একজন পেশাদার বাংলা সংবাদ সম্পাদক। নিচের ইংরেজি খবরটিকে সুন্দর, সাবলীল ও প্রাকৃতিক বাংলায় রিরাইট করো।
+        prompt = f"""তুমি একজন পেশাদার বাংলা সংবাদ সম্পাদক। নিচের ইংরেজি খবরটিকে সম্পূর্ণ বাংলায় রিরাইট করো।
 
 নিয়ম:
-1. শুধু বাংলায় লেখো
-2. টাইটেল আকর্ষণীয় ও সংক্ষিপ্ত রাখো (১০-১৮ শব্দ)
-3. কনটেন্ট ১৫০-২৫০ শব্দের মধ্যে রাখো
-4. নিউজের মূল তথ্য বাদ দিও না
-5. কোনো ইংরেজি শব্দ রাখো না (প্রয়োজন হলে বাংলায় লেখো)
+- শুধুমাত্র বাংলায় লেখো
+- টাইটেল আকর্ষণীয় ও সংক্ষিপ্ত হবে (সর্বোচ্চ ১৬ শব্দ)
+- কনটেন্ট ১৮০-২৮০ শব্দের মধ্যে হবে
+- মূল তথ্য বাদ দিও না
+- কোনো ইংরেজি শব্দ রাখবে না
 
 আসল টাইটেল: {title}
 
 আসল খবর:
-{content[:1200]}
+{content[:1100]}
 
-আউটপুট ফরম্যাট (ঠিক এভাবে দাও):
-TITLE: (এখানে বাংলা টাইটেল)
-CONTENT: (এখানে বাংলা কনটেন্ট)"""
+অবশ্যই এই ফরম্যাটে উত্তর দাও:
+TITLE: বাংলা টাইটেল এখানে
+CONTENT: বাংলা কনটেন্ট এখানে"""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "তুমি একজন অভিজ্ঞ বাংলা সংবাদ লেখক। শুধু বাংলায় লেখো।"},
+                {"role": "system", "content": "তুমি শুধু বাংলায় লেখো। ইংরেজি ব্যবহার করবে না।"},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.6,
-            max_tokens=800
+            temperature=0.55,
+            max_tokens=900
         )
 
         result = response.choices[0].message.content.strip()
+        print(f"    → AI Response received ({len(result)} chars)")
 
-        # Parse
         new_title = title
-        new_content = content[:800]
+        new_content = content[:900]
 
-        if "TITLE:" in result and "CONTENT:" in result:
-            parts = result.split("CONTENT:")
-            title_part = parts[0].replace("TITLE:", "").strip()
-            content_part = parts[1].strip()
-            if title_part:
-                new_title = title_part
-            if content_part:
-                new_content = content_part
+        # আরও ভালো পার্সিং
+        if "TITLE:" in result:
+            try:
+                after_title = result.split("TITLE:")[1]
+                if "CONTENT:" in after_title:
+                    new_title = after_title.split("CONTENT:")[0].strip()
+                    new_content = after_title.split("CONTENT:")[1].strip()
+                else:
+                    new_title = after_title.strip().split("\n")[0]
+            except:
+                pass
 
+        # যদি এখনো ইংরেজি থাকে তাহলে ফেইল ধরা
+        if re.search(r'[A-Za-z]{5,}', new_title) and not re.search(r'[\u0980-\u09FF]', new_title):
+            print("    → AI বাংলায় লিখেনি, আসল টাইটেল রাখা হচ্ছে")
+            return title, content[:900]
+
+        print(f"    → Success: {new_title[:40]}...")
         return new_title, new_content
 
     except Exception as e:
-        print(f"  AI Rewrite Error: {e}")
-        return title, content[:800]
+        print(f"    → AI Error: {e}")
+        return title, content[:900]
 
 # =========================================================
 # MAIN
