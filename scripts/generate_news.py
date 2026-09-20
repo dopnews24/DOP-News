@@ -13,22 +13,17 @@ import feedparser
 # SETTINGS
 # =========================================================
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-
-# ✅ সঠিক মডেল নাম
-MODEL = "gpt-4o-mini"
-
 NEWS_FILE = "news.json"
 
-MAX_PER_CATEGORY = 5
-MAX_TOTAL = 20
+MAX_PER_CATEGORY = 6
+MAX_TOTAL = 24
 
-# ✅ সব বাংলা RSS ফিড (BBC/CNN বাদ দিয়ে)
+# ✅ বাংলা সাইটের RSS ফিড (সব কাজ করে)
 FEEDS = {
     "বাংলাদেশ": "https://www.prothomalo.com/feed",
-    "বিশ্ব": "https://bangla.bdnews24.com/rss.xml",
+    "বিশ্ব": "https://www.prothomalo.com/world/feed",
     "খেলা": "https://www.prothomalo.com/sports/feed",
-    "প্রযুক্তি": "https://bangla.bdnews24.com/tech/rss.xml"
+    "প্রযুক্তি": "https://www.prothomalo.com/technology/feed",
 }
 
 
@@ -42,9 +37,12 @@ def clean_text(text):
     text = html.unescape(str(text))
     text = re.sub(r"<script.*?</script>", " ", text, flags=re.I | re.S)
     text = re.sub(r"<style.*?</style>", " ", text, flags=re.I | re.S)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.I)
+    text = re.sub(r"</p>", "\n\n", text, flags=re.I)
     text = re.sub(r"<[^>]+>", " ", text)
     text = text.replace("\xa0", " ")
-    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
 
@@ -76,16 +74,14 @@ def save_news(data):
 
 
 # =========================================================
-# REMOVE NEWSPAPER / WEBSITE REFERENCES
+# REMOVE NEWSPAPER REFERENCES
 # =========================================================
 
 SOURCE_WORDS = [
-    "ndtv", "cnn", "bbc", "reuters", "yahoo", "fox news", "foxsports",
-    "click2houston", "anandabazar", "আনন্দবাজার", "প্রথম আলো", "যুগান্তর",
-    "কালের কণ্ঠ", "সমকাল", "ইত্তেফাক", "বাংলাদেশ প্রতিদিন", "dhaka tribune",
-    "the daily star", "tbs", "new age", "associated press", "ap news",
-    "al jazeera", "guardian", "washington post", "new york times", "financial times",
-    "বিডিনিউজ২৪", "bdnews24", "বাংলা ট্রিবিউন", "bangla tribune"
+    "প্রথম আলো", "যুগান্তর", "কালের কণ্ঠ", "সমকাল", "ইত্তেফাক",
+    "বাংলাদেশ প্রতিদিন", "বিডিনিউজ২৪", "বাংলা ট্রিবিউন", "ঢাকা পোস্ট",
+    "bdnews24", "prothomalo", "banglatribune", "dhakapost",
+    "bbc", "cnn", "reuters", "al jazeera", "the daily star"
 ]
 
 
@@ -97,27 +93,7 @@ def remove_source_from_title(title):
         r"(?:\.com|\.net|\.org)?\s*$"
     )
     title = re.sub(pattern, "", title, flags=re.I)
-    title = re.sub(
-        r"\s*[-|–—]\s*[A-Za-z0-9.-]+\.(?:com|net|org|co\.uk|co\.in)\s*$",
-        "", title, flags=re.I
-    )
     return title.strip(" -–—|")
-
-
-def remove_source_references(text):
-    text = clean_text(text)
-    lines = re.split(r"(?<=[.!?।])\s+", text)
-    clean_lines = []
-    for line in lines:
-        low = line.lower()
-        if any(k in low for k in ["source:", "reference:", "সূত্র:", "রেফারেন্স:"]):
-            continue
-        if re.search(r"https?://|www\.", line, flags=re.I):
-            continue
-        if any(word in low for word in SOURCE_WORDS) and len(line) < 120:
-            continue
-        clean_lines.append(line.strip())
-    return " ".join(clean_lines).strip()
 
 
 # =========================================================
@@ -129,7 +105,11 @@ def get_rss_items(url):
     try:
         response = requests.get(
             url, timeout=30,
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/120.0.0.0 Safari/537.36"
+            }
         )
         response.raise_for_status()
         feed = feedparser.parse(response.content)
@@ -138,6 +118,38 @@ def get_rss_items(url):
     except Exception as e:
         print("RSS ERROR:", e)
         return []
+
+
+# =========================================================
+# EXTRACT FULL CONTENT (content:encoded)
+# =========================================================
+
+def extract_full_content(entry):
+    """
+    RSS entry থেকে সবচেয়ে বিস্তারিত টেক্সট বের করে।
+    content:encoded → content → summary → description
+    """
+
+    # 1. content:encoded (সবচেয়ে বিস্তারিত)
+    if entry.get("content"):
+        for c in entry.get("content", []):
+            val = c.get("value", "")
+            if val and len(val) > 200:
+                return clean_text(val)
+
+    # 2. content:encoded alternate
+    content_encoded = entry.get("content_encoded")
+    if content_encoded and len(content_encoded) > 200:
+        return clean_text(content_encoded)
+
+    # 3. summary
+    summary = entry.get("summary") or ""
+    if len(summary) > 200:
+        return clean_text(summary)
+
+    # 4. description
+    desc = entry.get("description") or ""
+    return clean_text(desc)
 
 
 # =========================================================
@@ -175,6 +187,17 @@ def extract_rss_image(entry):
     except Exception:
         pass
 
+    # content:encoded থেকে img ট্যাগ
+    try:
+        if entry.get("content"):
+            for c in entry.get("content", []):
+                raw = c.get("value", "")
+                match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', raw, flags=re.I)
+                if match:
+                    return match.group(1)
+    except Exception:
+        pass
+
     try:
         raw = entry.get("summary") or entry.get("description") or ""
         match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', raw, flags=re.I)
@@ -190,20 +213,28 @@ def extract_og_image(url):
     if not url:
         return ""
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/120.0.0.0 Safari/537.36"
     }
     try:
         response = requests.get(url, timeout=15, headers=headers, allow_redirects=True)
         if response.status_code != 200:
             return ""
         page = response.text
-        match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', page, flags=re.I)
+        match = re.search(
+            r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+            page, flags=re.I)
         if match:
             return html.unescape(match.group(1))
-        match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', page, flags=re.I)
+        match = re.search(
+            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+            page, flags=re.I)
         if match:
             return html.unescape(match.group(1))
-        match = re.search(r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']', page, flags=re.I)
+        match = re.search(
+            r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
+            page, flags=re.I)
         if match:
             return html.unescape(match.group(1))
     except Exception as e:
@@ -256,88 +287,14 @@ def get_best_image(entry, article_url, used_images, category, title):
 
 
 # =========================================================
-# AI WRITER (বিস্তারিত প্যারাগ্রাফ + বাংলা অনুবাদ)
-# =========================================================
-
-def rewrite_with_ai(title, description, category):
-    if not OPENAI_API_KEY:
-        print("WARNING: OPENAI_API_KEY missing — fallback used")
-        return None
-
-    title = remove_source_from_title(title)
-    description = remove_source_references(description)
-
-    prompt = f"""
-তুমি DOP NEWS 24-এর একজন পেশাদার বাংলা সংবাদ সম্পাদক।
-
-বিভাগ: {category}
-মূল শিরোনাম: {title}
-প্রাপ্ত বিবরণ: {description}
-
-নিচের নিয়ম মেনে একটি সম্পূর্ণ বাংলা সংবাদ তৈরি করো:
-
-১. মূল শিরোনাম যদি ইংরেজি হয়, অবশ্যই বাংলায় অনুবাদ করবে।
-২. কোনো সংবাদপত্র, টিভি চ্যানেল বা ওয়েবসাইটের নাম উল্লেখ করবে না।
-৩. সংবাদটি ৩ থেকে ৫টি সুগঠিত প্যারাগ্রাফে লিখবে।
-৪. প্রতিটি প্যারাগ্রাফের মাঝে দুটি newline (\\n\\n) থাকবে।
-৫. প্যারাগ্রাফগুলো যেন সংবাদের ধারাবাহিকতা বজায় রাখে।
-৬. প্রথম প্যারাগ্রাফে মূল ঘটনা, পরের প্যারাগ্রাফে বিস্তারিত, শেষে প্রেক্ষাপট।
-
-শুধুমাত্র নিচের JSON ফরম্যাটে উত্তর দাও, আর কিছু লিখো না:
-{{
-  "title": "বাংলা শিরোনাম এখানে",
-  "content": "প্রথম প্যারাগ্রাফ...\\n\\nদ্বিতীয় প্যারাগ্রাফ...\\n\\nতৃতীয় প্যারাগ্রাফ..."
-}}
-"""
-
-    payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": "তুমি একজন পেশাদার বাংলা সংবাদ সম্পাদক। সবসময় বৈধ JSON ফরম্যাটে উত্তর দাও।"},
-            {"role": "user", "content": prompt}
-        ],
-        "response_format": {"type": "json_object"},
-        "temperature": 0.7
-    }
-
-    try:
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
-            json=payload,
-            timeout=120
-        )
-
-        if response.status_code != 200:
-            print("OpenAI error:", response.text[:1000])
-            return None
-
-        result = response.json()
-        output_text = result["choices"][0]["message"]["content"]
-        article = json.loads(output_text)
-
-        new_title = remove_source_from_title(article.get("title", ""))
-        new_content = remove_source_references(article.get("content", ""))
-
-        if not new_title or not new_content:
-            return None
-
-        return {"title": new_title, "content": new_content}
-
-    except Exception as e:
-        print("AI ERROR:", e)
-        return None
-
-
-# =========================================================
 # MAIN
 # =========================================================
 
 def main():
-    print("\n========================================\nDOP NEWS 24 PUBLISHER\n========================================")
+    print("\n========================================\nDOP NEWS 24 PUBLISHER (FREE)\n========================================")
 
     data = load_news()
-    old_articles = [art for art in data.get("articles", []) if art.pop("source_url", None) is None]
+    old_articles = data.get("articles", [])
 
     existing_ids = {art.get("source_id") for art in old_articles if art.get("source_id")}
     used_images = {art.get("image") for art in old_articles if art.get("image")}
@@ -356,10 +313,10 @@ def main():
                 break
 
             raw_title = clean_text(entry.get("title", ""))
-            raw_description = clean_text(entry.get("summary") or entry.get("description", ""))
+            full_content = extract_full_content(entry)
             article_url = entry.get("link", "")
 
-            if not raw_title:
+            if not raw_title or not full_content:
                 continue
 
             clean_title = remove_source_from_title(raw_title)
@@ -371,30 +328,21 @@ def main():
 
             print("Processing:", clean_title)
 
-            ai = rewrite_with_ai(clean_title, raw_description, category)
+            # summary = প্রথম ২০০ অক্ষর, content = পুরোটা
+            summary = full_content[:200].strip()
+            if len(full_content) > 200:
+                summary += "..."
 
-            if ai:
-                final_title = ai["title"]
-                final_content = ai["content"]
-                print("AI article OK")
-            else:
-                final_title = remove_source_from_title(clean_title)
-                final_content = remove_source_references(raw_description)
-                if not final_content:
-                    print("Skipped: no clean content")
-                    continue
-                print("Fallback text used")
-
-            image = get_best_image(entry, article_url, used_images, category, final_title)
+            image = get_best_image(entry, article_url, used_images, category, clean_title)
             used_images.add(image)
 
             article = {
                 "id": make_id(source_id + str(datetime.now())),
                 "source_id": source_id,
                 "category": category,
-                "title": final_title,
-                "summary": final_content[:200] + "...",
-                "content": final_content,
+                "title": clean_title,
+                "summary": summary,
+                "content": full_content,
                 "image": image,
                 "published_at": datetime.now(timezone.utc).isoformat()
             }
@@ -409,7 +357,7 @@ def main():
         if len(new_articles) >= MAX_TOTAL:
             break
 
-    print("\nNew clean articles:", len(new_articles))
+    print("\nNew articles:", len(new_articles))
 
     combined = (new_articles + old_articles)[:MAX_TOTAL]
     data["articles"] = combined
