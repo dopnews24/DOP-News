@@ -28,7 +28,7 @@ jobs:
 
       - name: Generate AI news
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python scripts/generate_news.py
 
