@@ -234,6 +234,21 @@ const CAT_KEY = {
   "লাইফস্টাইল": "lifestyle"
 };
 
+const HIDE_NON_BENGALI = true; // বাংলা ভাষায় ইংরেজি শিরোনামের খবর লুকাতে true, দেখাতে false
+const BN = /[\u0980-\u09FF]/;
+
+function fixCat(a) {
+  const l = (a.link || "").toLowerCase();
+  const rules = [
+    ["aljazeera.com","বিশ্ব"],["bbc.co","বিশ্ব"],["ndtv.com","বিশ্ব"],
+    ["haal.fashion","লাইফস্টাইল"],["/international","বিশ্ব"],
+    ["/sports","খেলা"],["/entertainment","বিনোদন"],["/politics","রাজনীতি"],
+    ["/technology","প্রযুক্তি"],["/business","অর্থনীতি"],["/economy","অর্থনীতি"]
+  ];
+  for (const [k, c] of rules) if (l.includes(k)) return c;
+  return a.category || "বাংলাদেশ";
+}
+
 let ALL_ARTICLES = [];
 let currentLang = localStorage.getItem("dop_lang") || "bn";
 let currentCategory = "হোম";
@@ -269,7 +284,7 @@ function applyLanguage() {
   const nav = document.getElementById("navInner");
   nav.innerHTML = CATEGORIES.map(cat => {
     const active = cat === currentCategory ? "active" : "";
-    return `<a data-cat="\( {cat}" class=" \){active}">${navText(cat)}</a>`;
+    return `<a data-cat="${cat}" class="${active}">${navText(cat)}</a>`;
   }).join("");
 
   document.querySelectorAll("#navInner a").forEach(link => {
@@ -311,7 +326,8 @@ function showCategory(cat) {
     document.getElementById("gridTitle").textContent = catName + " — " + tr.gridTitle;
   }
 
-  let list = (cat === "হোম") ? ALL_ARTICLES : ALL_ARTICLES.filter(a => a.category === cat);
+  let base = ALL_ARTICLES.filter(a => !HIDE_NON_BENGALI || currentLang !== "bn" || BN.test(a.title));
+  let list = (cat === "হোম") ? base : base.filter(a => fixCat(a) === cat);
 
   if (!list || list.length === 0) {
     fm.innerHTML = "";
@@ -361,7 +377,7 @@ function openModal(a) {
   document.getElementById("modalDescription").innerHTML = `
     <p>${escapeHtml(a.content || a.summary || "")}</p>
     <p style="margin-top:20px;color:#888;font-size:14px">
-      ${escapeHtml(a.category || "")} • ${timeAgo(a.published_at)}
+      ${escapeHtml(fixCat(a))} • ${timeAgo(a.published_at)}
     </p>`;
   document.getElementById("modal").style.display = "block";
   document.body.style.overflow = "hidden";
@@ -408,7 +424,7 @@ async function loadNews() {
     newsArea.style.display = "block";
 
     document.getElementById("ticker").textContent =
-      articles.slice(0, 6).map(a => a.title).join("  •  ");
+      articles.filter(a => BN.test(a.title)).slice(0, 6).map(a => a.title).join("  •  ");
 
   } catch (err) {
     console.error(err);
