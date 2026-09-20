@@ -592,10 +592,147 @@ footer p{
 <script>
 
 /* =====================================================
-   DOP NEWS 24
-   RSS SETTINGS
+   DOP NEWS 24 - news.json loader
 ===================================================== */
 
+let ALL_ARTICLES = [];
+let CURRENT_CATEGORY = "হোম";
+
+function timeAgo(dateStr){
+    const diff = (Date.now() - new Date(dateStr)) / 1000;
+    if(diff < 60) return "এইমাত্র";
+    if(diff < 3600) return Math.floor(diff/60) + " মিনিট আগে";
+    if(diff < 86400) return Math.floor(diff/3600) + " ঘণ্টা আগে";
+    return Math.floor(diff/86400) + " দিন আগে";
+}
+
+async function loadNews(){
+    const loading = document.getElementById("loading");
+    const error = document.getElementById("error");
+    const newsArea = document.getElementById("newsArea");
+
+    loading.style.display = "block";
+    error.style.display = "none";
+    newsArea.style.display = "none";
+
+    try{
+        const res = await fetch("./news.json?t=" + Date.now());
+        if(!res.ok) throw new Error("HTTP " + res.status);
+
+        const data = await res.json();
+        const articles = data.articles || [];
+
+        if(articles.length === 0) throw new Error("empty");
+
+        ALL_ARTICLES = articles;
+
+        renderNews(articles);
+
+        loading.style.display = "none";
+        newsArea.style.display = "block";
+
+        // ticker
+        const ticker = document.getElementById("ticker");
+        ticker.textContent = articles
+            .slice(0,5)
+            .map(a => a.title)
+            .join("  •  ");
+
+    }catch(err){
+        console.error("News load error:", err);
+        loading.style.display = "none";
+        error.style.display = "block";
+        document.getElementById("errorText").textContent =
+            "সংবাদ লোড করা যায়নি। (" + err.message + ")";
+    }
+}
+
+function renderNews(articles){
+    if(articles.length === 0){
+        document.getElementById("featuredMain").innerHTML =
+            "<p style='padding:20px'>এই বিভাগে কোনো সংবাদ নেই।</p>";
+        document.getElementById("sideNews").innerHTML = "";
+        document.getElementById("newsGrid").innerHTML = "";
+        return;
+    }
+
+    // Featured
+    const main = articles[0];
+    document.getElementById("featuredMain").innerHTML = `
+        <img src="${main.image || ''}" alt="">
+        <div class="featured-text">
+            <h1>${main.title}</h1>
+            <p class="news-description">${main.summary || ""}</p>
+            <div class="news-time">${timeAgo(main.published_at)}</div>
+        </div>
+    `;
+    document.getElementById("featuredMain").onclick = () => openModal(main);
+
+    // Side news (next 4)
+    const side = articles.slice(1,5);
+    document.getElementById("sideNews").innerHTML = side.map(a => `
+        <div class="side-card" data-id="${a.id}">
+            <h3>${a.title}</h3>
+            <div class="news-time">${timeAgo(a.published_at)}</div>
+        </div>
+    `).join("");
+    side.forEach((a,i) => {
+        document.querySelectorAll(".side-card")[i].onclick = () => openModal(a);
+    });
+
+    // Grid (rest)
+    const grid = articles.slice(5);
+    document.getElementById("newsGrid").innerHTML = grid.map(a => `
+        <div class="news-card" data-id="${a.id}">
+            <img class="news-image" src="${a.image || ''}" alt="">
+            <div class="news-content">
+                <div class="news-title">${a.title}</div>
+                <div class="news-description">${(a.summary || "").slice(0,120)}...</div>
+                <div class="news-time">${timeAgo(a.published_at)}</div>
+            </div>
+        </div>
+    `).join("");
+    grid.forEach((a,i) => {
+        document.querySelectorAll(".news-card")[i].onclick = () => openModal(a);
+    });
+}
+
+function openModal(article){
+    document.getElementById("modalImage").src = article.image || "";
+    document.getElementById("modalTitle").textContent = article.title;
+    document.getElementById("modalDescription").innerHTML =
+        `<p>${article.summary || ""}</p>
+         <p style="margin-top:15px;color:#888;font-size:14px">
+            ${article.category || ""} • ${timeAgo(article.published_at)}
+         </p>`;
+    document.getElementById("modal").style.display = "block";
+}
+
+function closeModal(){
+    document.getElementById("modal").style.display = "none";
+}
+
+// Category filter
+document.querySelectorAll(".nav-inner a").forEach(link => {
+    link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const cat = link.textContent.trim();
+
+        if(cat === "হোম"){
+            renderNews(ALL_ARTICLES);
+        }else{
+            const map = {"খেলাধুলা":"খেলা"};
+            const realCat = map[cat] || cat;
+            const filtered = ALL_ARTICLES.filter(a => a.category === realCat);
+            renderNews(filtered);
+        }
+        window.scrollTo({top:0, behavior:"smooth"});
+    });
+});
+
+// Start
+loadNews();
+</script>
 const RSS_API =
     "https://api.rss2json.com/v1/api.json?rss_url=";
 
