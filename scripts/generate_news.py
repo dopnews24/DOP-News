@@ -26,9 +26,9 @@ if not HAS_OPENAI:
 # =========================================================
 
 NEWS_FILE = "news.json"
-MAX_TOTAL = 50
-MAX_BD_PER_RUN = 8
-MAX_WORLD_PER_RUN = 14
+MAX_TOTAL = 80
+MAX_BD_PER_RUN = 10
+MAX_WORLD_PER_RUN = 18
 
 BD_FEEDS = [
     "https://www.prothomalo.com/feed",
@@ -39,6 +39,7 @@ WORLD_FEEDS = [
     "https://feeds.bbci.co.uk/news/world/rss.xml",
     "https://www.aljazeera.com/xml/rss/all.xml",
     "https://rss.cnn.com/rss/edition_world.rss",
+    "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best",
     "https://feeds.feedburner.com/ndtvnews-world-news",
 ]
 
@@ -210,14 +211,15 @@ def rewrite_with_ai(title, content, is_english):
         "নিয়ম:\n"
         "- শুধু বাংলায় লেখো। বিদেশি নাম ও সংস্থার নাম বাংলা অক্ষরে লেখো (যেমন: ট্রাম্প, বিবিসি)\n"
         "- শুধু নিচের তথ্য ব্যবহার করো। নিজে থেকে কোনো তথ্য, সংখ্যা বা উদ্ধৃতি যোগ করবে না\n"
-        "- মূল লেখার বাক্য হুবহু কপি করবে না\n"
+        "- মূল লেখার বাক্য হুবহু কপি করবে না, নিজের ভাষায় লিখবে\n"
         "- শিরোনাম সর্বোচ্চ ১৬ শব্দ\n"
-        "- মূল লেখা ছোট হলে ২-৪ বাক্যে শেষ করো। বড় হলে ১২০-২২০ শব্দ\n"
+        "- মূল লেখা বড় হলে গুরুত্বপূর্ণ সব তথ্যসহ বিস্তারিত ২০০-৩৫০ শব্দে অনুচ্ছেদ ভাগ করে লেখো\n"
+        "- মূল লেখা ছোট হলে যতটুকু তথ্য আছে ততটুকুই ২-৪ বাক্যে লেখো, বাড়িয়ে লিখবে না\n"
         "- category এই তালিকা থেকে ঠিক একটি: " + ", ".join(ALLOWED_CATEGORIES) + "\n\n"
         "শুধু JSON দাও, এই ফরম্যাটে:\n"
         '{"title": "...", "content": "...", "category": "..."}\n\n'
         f"আসল শিরোনাম: {title}\n\n"
-        f"আসল খবর:\n{content[:1500]}"
+        f"আসল খবর:\n{content[:3500]}"
     )
 
     for attempt in range(2):
@@ -229,7 +231,7 @@ def rewrite_with_ai(title, content, is_english):
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.4,
-                max_tokens=900,
+                max_tokens=1600,
                 response_format={"type": "json_object"},
             )
             data = json.loads(resp.choices[0].message.content)
@@ -248,7 +250,7 @@ def rewrite_with_ai(title, content, is_english):
 # COLLECT
 # =========================================================
 
-def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_links):
+def collect(feed_urls, limit, per_feed, is_english, default_cat, min_len, used_ids, used_links):
     items = []
     for feed_url in feed_urls:
         if len(items) >= limit:
@@ -264,7 +266,7 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_
             link = entry.get("link", "")
             content = extract_full_content(entry)
 
-            if not title or not link or len(content) < 80:
+            if not title or not link or len(content) < min_len:
                 continue
             if "/video/" in link or any(w in title for w in SKIP_TITLE_WORDS):
                 continue
@@ -279,8 +281,8 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_
             if result:
                 bn_title, bn_content, ai_cat = result
             elif not is_english:
-                # AI না চললে বাংলা খবরের শুধু শিরোনাম ও ছোট অংশ রাখা হয়
-                bn_title, bn_content, ai_cat = title, content[:250].strip() + "...", ""
+                # AI না চললে শুধু ব্যাকআপ হিসেবে বাংলা খবরের মূল লেখা রাখা হয়
+                bn_title, bn_content, ai_cat = title, content[:2500].strip(), ""
             else:
                 print("    → বাদ (বাংলা রিরাইট হয়নি)")
                 continue
@@ -322,19 +324,19 @@ def main():
     data = load_news()
     all_old = data.get("articles", [])
 
-    # শুধু নতুন নিয়মে বানানো ও বাংলা শিরোনামের খবর রাখা হয়
-    old_articles = [a for a in all_old if a.get("cat_ok") and is_bengali(a.get("title", ""))]
+    # শুধু ইংরেজি শিরোনামের পুরোনো খবর বাদ, বাকি সব থাকে
+    old_articles = [a for a in all_old if is_bengali(a.get("title", ""))]
     print(f"Old articles kept: {len(old_articles)} / {len(all_old)}")
 
-    used_ids = {a["source_id"] for a in old_articles if a.get("source_id")}
-    used_links = {a["link"] for a in old_articles if a.get("link")}
+    used_ids = {a["source_id"] for a in all_old if a.get("source_id")}
+    used_links = {a["link"] for a in all_old if a.get("link")}
 
     print("\n[1] Bangladesh News...")
-    bd = collect(BD_FEEDS, MAX_BD_PER_RUN, 15, False, "বাংলাদেশ", used_ids, used_links)
+    bd = collect(BD_FEEDS, MAX_BD_PER_RUN, 20, False, "বাংলাদেশ", 60, used_ids, used_links)
     print(f"  Added Bangladesh: {len(bd)}")
 
     print("\n[2] World News...")
-    world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, 8, True, "বিশ্ব", used_ids, used_links)
+    world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, 10, True, "বিশ্ব", 80, used_ids, used_links)
     print(f"  Added World: {len(world)}")
 
     combined = bd + world + old_articles
