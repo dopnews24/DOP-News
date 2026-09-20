@@ -223,8 +223,15 @@ const TRANSLATIONS = {
 
 const CATEGORIES = ["হোম", "বাংলাদেশ", "বিশ্ব", "রাজনীতি", "অর্থনীতি", "প্রযুক্তি", "খেলা", "বিনোদন", "লাইফস্টাইল"];
 const CAT_KEY = {
-  "হোম": "home", "বাংলাদেশ": "bangladesh", "বিশ্ব": "world", "রাজনীতি": "politics",
-  "অর্থনীতি": "economy", "প্রযুক্তি": "technology", "খেলা": "sports", "বিনোদন": "entertainment", "লাইফস্টাইল": "lifestyle"
+  "হোম": "home",
+  "বাংলাদেশ": "bangladesh",
+  "বিশ্ব": "world",
+  "রাজনীতি": "politics",
+  "অর্থনীতি": "economy",
+  "প্রযুক্তি": "technology",
+  "খেলা": "sports",
+  "বিনোদন": "entertainment",
+  "লাইফস্টাইল": "lifestyle"
 };
 
 let ALL_ARTICLES = [];
@@ -266,11 +273,11 @@ function applyLanguage() {
   }).join("");
 
   document.querySelectorAll("#navInner a").forEach(link => {
-    link.onclick = (e) => {
+    link.onclick = function(e) {
       e.preventDefault();
       document.querySelectorAll("#navInner a").forEach(l => l.classList.remove("active"));
-      link.classList.add("active");
-      currentCategory = link.getAttribute("data-cat");
+      this.classList.add("active");
+      currentCategory = this.getAttribute("data-cat");
       showCategory(currentCategory);
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -284,7 +291,9 @@ function applyLanguage() {
   document.getElementById("retryBtn").textContent = tr.retry;
   document.getElementById("footerDesc").textContent = tr.footerDesc;
 
-  if (ALL_ARTICLES.length > 0) showCategory(currentCategory);
+  if (ALL_ARTICLES.length > 0) {
+    showCategory(currentCategory);
+  }
 }
 
 function showCategory(cat) {
@@ -319,7 +328,7 @@ function showCategory(cat) {
       <p class="news-description">${escapeHtml(main.summary || "")}</p>
       <div class="news-time">${timeAgo(main.published_at)}</div>
     </div>`;
-  fm.onclick = () => openModal(main);
+  fm.onclick = function() { openModal(main); };
 
   const side = list.slice(1, 5);
   sn.innerHTML = side.map(a => `
@@ -327,7 +336,9 @@ function showCategory(cat) {
       <h3>${escapeHtml(a.title)}</h3>
       <div class="news-time">${timeAgo(a.published_at)}</div>
     </div>`).join("");
-  sn.querySelectorAll(".side-card").forEach((el, i) => el.onclick = () => openModal(side[i]));
+  sn.querySelectorAll(".side-card").forEach((el, i) => {
+    el.onclick = function() { openModal(side[i]); };
+  });
 
   const grid = list.slice(5);
   ng.innerHTML = grid.map(a => `
@@ -339,7 +350,9 @@ function showCategory(cat) {
         <div class="news-time">${timeAgo(a.published_at)}</div>
       </div>
     </div>`).join("");
-  ng.querySelectorAll(".news-card").forEach((el, i) => el.onclick = () => openModal(grid[i]));
+  ng.querySelectorAll(".news-card").forEach((el, i) => {
+    el.onclick = function() { openModal(grid[i]); };
+  });
 }
 
 function openModal(a) {
@@ -359,14 +372,14 @@ function closeModal() {
   document.body.style.overflow = "";
 }
 
-document.getElementById("modal").addEventListener("click", e => {
+document.getElementById("modal").addEventListener("click", function(e) {
   if (e.target.id === "modal") closeModal();
 });
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", function(e) {
   if (e.key === "Escape") closeModal();
 });
 
-document.getElementById("language").addEventListener("change", function () {
+document.getElementById("language").addEventListener("change", function() {
   currentLang = this.value;
   localStorage.setItem("dop_lang", currentLang);
   applyLanguage();
