@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
   schedule:
-    - cron: "*/30 * * * *"   # প্রতি ৩০ মিনিটে একবার
+     - cron: "0 * * * *"
 
 permissions:
   contents: write
