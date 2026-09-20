@@ -1,6 +1,56 @@
 {
-  "updated_at": "2026-09-20T04:45:05.453452+00:00",
+  "updated_at": "2026-09-20T04:56:07.420090+00:00",
   "articles": [
+    {
+      "id": "34480a8f8b1e552cc154",
+      "source_id": "c3d03d121285a3312e3f",
+      "category": "বাংলাদেশ",
+      "title": "উত্তরে ডেঙ্গুর ১০০ ‘হটস্পট’, দক্ষিণে ২৯ ওয়ার্ড ঝুঁকিপূর্ণ, সেগুলো কোনগুলো",
+      "summary": "হাসপাতালে ভর্তি ডেঙ্গু রোগীদের ঠিকানা যাচাই করে ঢাকা উত্তর সিটি এলাকায় ডেঙ্গুর ১০০টি হটস্পট চিহ্নিত করেছে ডিএনসিসি।...",
+      "content": "হাসপাতালে ভর্তি ডেঙ্গু রোগীদের ঠিকানা যাচাই করে ঢাকা উত্তর সিটি এলাকায় ডেঙ্গুর ১০০টি হটস্পট চিহ্নিত করেছে ডিএনসিসি।",
+      "image": "https://media.prothomalo.com/prothomalo-bangla/2026-09-19/13gxb3ga/DNCC-02.jfif",
+      "published_at": "2026-09-20T04:56:05.477124+00:00"
+    },
+    {
+      "id": "dd404313bc93ab738c88",
+      "source_id": "e07ecaa98564dbc6d559",
+      "category": "বাংলাদেশ",
+      "title": "টি-টুয়েন্টি র‍্যাঙ্কিংয়ে শীর্ষস্থান হারাল ভারত",
+      "summary": "চলতি বছর এ নিয়ে দ্বিতীয়বার শীর্ষে উঠল ইংল্যান্ড। গত জুলাইয়ে ভারতকে ৪-০ ব্যবধানে হারিয়ে শীর্ষে উঠেছিল দলটি।...",
+      "content": "চলতি বছর এ নিয়ে দ্বিতীয়বার শীর্ষে উঠল ইংল্যান্ড। গত জুলাইয়ে ভারতকে ৪-০ ব্যবধানে হারিয়ে শীর্ষে উঠেছিল দলটি।",
+      "image": "https://media.prothomalo.com/prothomalo-bangla/2026-09-20/18r2onoz/483952-01-02.jpg",
+      "published_at": "2026-09-20T04:56:05.867290+00:00"
+    },
+    {
+      "id": "4ea17e2bcb67ef63d0d2",
+      "source_id": "0d7a3c9bb753361581f1",
+      "category": "বাংলাদেশ",
+      "title": "ঢাকায় ৯ ঘণ্টায় ৪৯ মিলিমিটার বৃষ্টি, হঠাৎ এই বৃষ্টি কেন",
+      "summary": "রাজধানীসহ দেশের বিভিন্ন এলাকায় হালকা বৃষ্টির পূর্বাভাস গতকাল আবহাওয়া অধিদপ্তর দিয়েছিল বটে; কিন্তু এতটা বৃষ্টি হবে, তা তারা বলেনি।...",
+      "content": "রাজধানীসহ দেশের বিভিন্ন এলাকায় হালকা বৃষ্টির পূর্বাভাস গতকাল আবহাওয়া অধিদপ্তর দিয়েছিল বটে; কিন্তু এতটা বৃষ্টি হবে, তা তারা বলেনি।",
+      "image": "https://media.prothomalo.com/prothomalo-bangla/2026-09-20/x5i3p4v3/Rain.jpeg",
+      "published_at": "2026-09-20T04:56:06.023012+00:00"
+    },
+    {
+      "id": "e5f3117418b66bd3a952",
+      "source_id": "4643cb2f561286e3a985",
+      "category": "বাংলাদেশ",
+      "title": "নতুন চাকরিতে যোগদানের আড়াই ঘণ্টা পর ছাঁটাই",
+      "summary": "ক্রিস চাকরি হারানোর কারণ জানতে চান। তাঁকে বলা হয়, ‘পরিচ্ছন্নতা ইস্যুতে’ তাঁর নিয়োগ বাতিল করা হয়েছে।...",
+      "content": "ক্রিস চাকরি হারানোর কারণ জানতে চান। তাঁকে বলা হয়, ‘পরিচ্ছন্নতা ইস্যুতে’ তাঁর নিয়োগ বাতিল করা হয়েছে।",
+      "image": "https://media.prothomalo.com/prothomalo-bangla/2026-09-19/irpq9w1m/Capture.PNG",
+      "published_at": "2026-09-20T04:56:06.178722+00:00"
+    },
+    {
+      "id": "7ba1badbb0eb1bc9ca56",
+      "source_id": "d97821b39259ba4757d1",
+      "category": "বাংলাদেশ",
+      "title": "চেনা রুমি যেভাবে নতুন করে ফিরলেন",
+      "summary": "একসময় আরফিন রুমি মানেই ছিল ব্যস্ততা। বিরতি নতুন গান, নাটকের টাইটেল গান, সুর-সংগীত, আবহসংগীত ও স্টেজ শো—সব মিলিয়ে আবারও ব্যস্ত তিনি।...",
+      "content": "একসময় আরফিন রুমি মানেই ছিল ব্যস্ততা। বিরতি নতুন গান, নাটকের টাইটেল গান, সুর-সংগীত, আবহসংগীত ও স্টেজ শো—সব মিলিয়ে আবারও ব্যস্ত তিনি।",
+      "image": "https://media.prothomalo.com/prothomalo-bangla/2026-09-19/9zl75oyd/%E0%A6%86%E0%A6%B0%E0%A6%AB%E0%A6%BF%E0%A6%A8-%E0%A6%B0%E0%A7%81%E0%A6%AE%E0%A6%BF-4.jpg",
+      "published_at": "2026-09-20T04:56:06.354635+00:00"
+    },
     {
       "id": "9599cc107fbd8c92ef3c",
       "source_id": "6ece10589bd1c03a2f32",
@@ -135,51 +185,6 @@
       "summary": "Former Celtic captain Scott Brown believes a win for the Scottish champions against Rangers on Sunday \"changes the game\" after a turbulent week for Martin O'Neill's side.",
       "image": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/8156/live/fe89adb0-b45d-11f1-b213-1db858c3e27c.jpg",
       "published_at": "2026-09-20T04:45:02.470117+00:00"
-    },
-    {
-      "id": "3355fd57b355030b0b52",
-      "source_id": "6b7a5be17b7c250cf580",
-      "category": "প্রযুক্তি",
-      "title": "Forget the AI Slowdown—the Vulnerability Explosion Is Already Happening",
-      "summary": "AI labs are toying with an industry-wide pact to slow development. Meanwhile, widely available AI chatbots are already helping uncover a tidal wave of security flaws.",
-      "image": "https://media.wired.com/photos/6aada5d618f30d6f17ee2971/master/pass/Kernal-Panic-AI-SlowDown-Wont-Stop-Security-Vulnerability-Explosion-Security.jpg",
-      "published_at": "2026-09-20T04:45:03.030570+00:00"
-    },
-    {
-      "id": "2f2608c8828f29ecc432",
-      "source_id": "31ea2869255cac8939c7",
-      "category": "প্রযুক্তি",
-      "title": "Tired of Cluttered Productivity Apps? This One’s Just a Text Document",
-      "summary": "The totally free macOS app Tasks.txt makes up for missing features with sheer elegance.",
-      "image": "https://media.wired.com/photos/6aacfa7099aa97f60264424c/master/pass/091826-Productivity%20Doc.jpg",
-      "published_at": "2026-09-20T04:45:03.999733+00:00"
-    },
-    {
-      "id": "1925f756a7ebd1f32271",
-      "source_id": "ff2aa686ec4c7ceddf19",
-      "category": "প্রযুক্তি",
-      "title": "Samsung Galaxy Watch9 Review: I Don’t Need Another Health Score",
-      "summary": "Samsung’s latest smartwatch offers useful health tracking alongside a growing pile of metrics you may never use.",
-      "image": "https://media.wired.com/photos/6aadfb978ffbfab4b483f09a/master/pass/Review--Samsung-Galaxy-Watch9.jpg",
-      "published_at": "2026-09-20T04:45:04.584007+00:00"
-    },
-    {
-      "id": "dca0a84e8c6a712934b2",
-      "source_id": "2b3ee2c0668c3f609eb7",
-      "category": "প্রযুক্তি",
-      "title": "An Editor’s Picks: The Best Gifts for Bird Lovers",
-      "summary": "Whether they’re into feeders, field guides, or games, these tried-and-tested picks are sure to land perfectly.",
-      "image": "https://media.wired.com/photos/69f4325923bfb7bf0cbdff79/master/pass/The-Best-Gifts-for-Bird-Lovers.jpg",
-      "published_at": "2026-09-20T04:45:04.987678+00:00"
-    },
-    {
-      "id": "c76e371f6ff6dc91d9b9",
-      "source_id": "27067f6d346b5dc50337",
-      "category": "প্রযুক্তি",
-      "title": "Mathematicians Hate AI. They Can’t Quit It",
-      "summary": "Powerful AI models have created an existential risk to the field, but researchers can’t stop relying on them because they’re too useful.",
-      "image": "https://media.wired.com/photos/6aad73fd03ca378a32980599/master/pass/091826-Math%20Hate%20AI.jpg",
-      "published_at": "2026-09-20T04:45:05.453437+00:00"
     }
   ]
 }
