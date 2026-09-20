@@ -4,24 +4,41 @@ import hashlib
 import re
 import html
 import time
+import random
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 import requests
 import feedparser
+
+try:
+    import trafilatura  # পুরো আর্টিকেল পেজ থেকে লেখা বের করার জন্য
+except ImportError:
+    trafilatura = None
 
 # =========================================================
 # SETTINGS
 # =========================================================
 
 START_TIME = time.time()
-RUN_BUDGET = int(os.getenv("RUN_BUDGET") or "480")        # পুরো রানের সর্বোচ্চ সেকেন্ড
+RUN_BUDGET = int(os.getenv("RUN_BUDGET") or "600")        # পুরো রানের সর্বোচ্চ সেকেন্ড
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT") or "40")
 
 NEWS_FILE = "news.json"
-MAX_TOTAL = 80
-MAX_BD_PER_RUN = 4        # ফ্রি সীমার জন্য কম রাখা হয়েছে, বাড়াতে পারেন
-MAX_WORLD_PER_RUN = 6
-FALLBACK_CHARS = 500      # AI না চললে বাংলা খবরের যতটুকু অংশ রাখা হবে
+MAX_TOTAL = int(os.getenv("MAX_TOTAL") or "300")          # আগে ৮০ ছিল, ৪-৫ ঘণ্টার খবরেই ভরে যেত
+MAX_BD_PER_RUN = int(os.getenv("MAX_BD_PER_RUN") or "6")
+MAX_WORLD_PER_RUN = int(os.getenv("MAX_WORLD_PER_RUN") or "14")
+PER_FEED_NEW_WORLD = 2    # প্রতিটি ফিড থেকে প্রতি রানে সর্বোচ্চ নতুন খবর (যাতে একটি ফিডেই সীমা শেষ না হয়)
+PER_FEED_NEW_BD = 6
+FEED_SCAN_DEPTH = 15      # প্রতিটি ফিডের প্রথম কয়টি এন্ট্রি দেখা হবে
+FULL_TEXT_MIN = 800       # ফিডের লেখা এর চেয়ে ছোট হলে আর্টিকেল পেজ থেকে পুরো লেখা আনা হবে
+FALLBACK_CHARS = int(os.getenv("FALLBACK_CHARS") or "250")   # AI না চললে বাংলা খবরের যতটুকু অংশ রাখা হবে
+
+UA_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODELS = [
@@ -32,6 +49,7 @@ GEMINI_MODELS = [
 AI_DELAY = float(os.getenv("AI_DELAY") or "7")   # দুই রিকোয়েস্টের মাঝে সেকেন্ড
 AI_DISABLED = not GEMINI_KEY
 ACTIVE_MODEL = ""
+DEAD_MODELS = set()       # যে মডেলের কোটা শেষ বা যেটি পাওয়া যায়নি
 
 if AI_DISABLED:
     print("Warning: GEMINI_API_KEY missing, AI disabled")
@@ -40,9 +58,23 @@ BD_FEEDS = [
     "https://www.prothomalo.com/feed",
 ]
 
+# সব ফিড চালু আছে কিনা Actions লগে "entries: N" দেখে যাচাই করুন। 0 হলে ওই ফিড বদলান।
 WORLD_FEEDS = [
     "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/asia/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/africa/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/europe/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/latin_america/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml",
     "https://www.aljazeera.com/xml/rss/all.xml",
+    "https://www.theguardian.com/world/rss",
+    "https://rss.dw.com/xml/rss-en-world",
+    "https://www.france24.com/en/rss",
+    "https://feeds.npr.org/1004/rss.xml",
+    "https://feeds.skynews.com/feeds/rss/world.xml",
+    "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+    "https://www.thehindu.com/news/international/feeder/default.rss",
     "https://feeds.feedburner.com/ndtvnews-world-news",
 ]
 
@@ -57,6 +89,7 @@ LINK_RULES = [
     ("/economy", "অর্থনীতি"),
     ("/lifestyle", "লাইফস্টাইল"),
     ("/international", "বিশ্ব"),
+    ("/world", "বিশ্ব"),          # প্রথম আলোর বিশ্ব বিভাগ /world/ পথে থাকে
 ]
 
 CATEGORY_KEYWORDS = {
@@ -72,6 +105,9 @@ SKIP_TITLE_WORDS = ["সারা দিনের খবর"]
 # =========================================================
 # HELPERS
 # =========================================================
+
+def over_budget():
+    return time.time() - START_TIME > RUN_BUDGET
 
 def clean_text(text):
     if not text:
@@ -89,6 +125,16 @@ def clean_text(text):
 
 def make_id(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:20]
+
+def norm_link(link):
+    """?utm=... ইত্যাদি বাদ দিয়ে লিংক এক করা, যাতে একই খবর দুই ফিডে এলে ডুপ্লিকেট ধরা পড়ে"""
+    return (link or "").split("?")[0].split("#")[0].rstrip("/")
+
+def source_name(link):
+    try:
+        return urlparse(link).netloc.replace("www.", "")
+    except Exception:
+        return ""
 
 def is_bengali(text, min_ratio=0.6):
     letters = re.findall(r"[A-Za-z\u0980-\u09FF]", text or "")
@@ -119,9 +165,7 @@ def save_news(data):
 
 def get_rss_items(url):
     try:
-        r = requests.get(url, timeout=25, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        })
+        r = requests.get(url, timeout=25, headers=UA_HEADERS)
         if r.status_code != 200:
             print(f"  RSS status {r.status_code}: {url}")
             return []
@@ -143,6 +187,34 @@ def extract_full_content(entry):
     if len(summary) > 100:
         return clean_text(summary)
     return clean_text(entry.get("description") or "")
+
+def paragraph_fallback(page):
+    paras = re.findall(r"<p[^>]*>(.*?)</p>", page or "", flags=re.S | re.I)
+    texts = [clean_text(p) for p in paras]
+    texts = [t for t in texts if len(t) > 60]
+    return "\n\n".join(texts)
+
+def fetch_article_text(url):
+    """আর্টিকেল পেজ থেকে পুরো লেখা আনে। ব্যর্থ হলে খালি স্ট্রিং"""
+    try:
+        r = requests.get(url, timeout=15, headers=UA_HEADERS)
+        if r.status_code != 200:
+            print(f"    page status {r.status_code}")
+            return ""
+        page = r.text
+    except Exception as e:
+        print(f"    page fetch error: {e}")
+        return ""
+
+    text = ""
+    if trafilatura:
+        try:
+            text = trafilatura.extract(page, include_comments=False, include_tables=False) or ""
+        except Exception:
+            text = ""
+    if len(text) < 300:
+        text = paragraph_fallback(page)
+    return text.strip()
 
 def extract_image(entry):
     for key in ("media_content", "media_thumbnail"):
@@ -192,7 +264,7 @@ def keyword_hit(text, kw):
     return kw in text
 
 def detect_category(title, content, default):
-    text = title + " " + content
+    text = title  # শুধু শিরোনাম: পুরো লেখা ধরলে "প্রকৌশল ও প্রযুক্তি বিশ্ববিদ্যালয়" এর মতো নামে ভুল ক্যাটাগরি হয়
     for cat, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
             if keyword_hit(text, kw):
@@ -213,7 +285,7 @@ def call_gemini(prompt):
     global AI_DISABLED, ACTIVE_MODEL
     if AI_DISABLED:
         return None
-    if time.time() - START_TIME > RUN_BUDGET:
+    if over_budget():
         AI_DISABLED = True
         print("    → সময়সীমা শেষ, এই রানে AI বন্ধ")
         return None
@@ -222,12 +294,17 @@ def call_gemini(prompt):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.4,
-            "maxOutputTokens": 4096,
+            "maxOutputTokens": 8192,   # বাংলা টোকেন বেশি খায়, ৪০৯৬-এ JSON মাঝপথে কেটে যেতে পারত
             "responseMimeType": "application/json",
         },
     }
     headers = {"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"}
-    models = [ACTIVE_MODEL] if ACTIVE_MODEL else GEMINI_MODELS
+
+    # সফল মডেল আগে, তারপর বাকিগুলো
+    models = [m for m in GEMINI_MODELS if m not in DEAD_MODELS]
+    if ACTIVE_MODEL in models:
+        models.remove(ACTIVE_MODEL)
+        models.insert(0, ACTIVE_MODEL)
 
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -244,7 +321,9 @@ def call_gemini(prompt):
                 ACTIVE_MODEL = model
                 print(f"    → OK {model} {secs}s")
                 try:
-                    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                    cand = r.json()["candidates"][0]
+                    parts = cand["content"]["parts"]
+                    return "".join(p.get("text", "") for p in parts)
                 except Exception:
                     print("    → খালি বা ব্লক করা উত্তর")
                     return None
@@ -253,16 +332,22 @@ def call_gemini(prompt):
 
             if r.status_code == 429:
                 if attempt == 0:
-                    time.sleep(30)   # প্রতি মিনিটের সীমা হলে অপেক্ষা
+                    time.sleep(20)   # প্রতি মিনিটের সীমা হলে অপেক্ষা
                     continue
-                AI_DISABLED = True
-                print("    → সীমা শেষ, এই রানে AI বন্ধ")
-                return None
+                DEAD_MODELS.add(model)   # এই মডেলের কোটা শেষ, বাকি মডেল চেষ্টা হবে
+                print(f"    → {model} এর সীমা শেষ, পরের মডেলে যাচ্ছি")
+                break
             if r.status_code in (401, 403):
                 AI_DISABLED = True
                 print("    → key সমস্যা, AI বন্ধ")
                 return None
-            break  # 400, 404, 5xx: পরের মডেল চেষ্টা
+            if r.status_code == 404:
+                DEAD_MODELS.add(model)   # মডেলের নাম ভুল বা বন্ধ
+            break  # 400, 5xx: পরের মডেল চেষ্টা
+
+    if all(m in DEAD_MODELS for m in GEMINI_MODELS):
+        AI_DISABLED = True
+        print("    → সব মডেলের সীমা শেষ, এই রানে AI বন্ধ")
     return None
 
 def rewrite_with_ai(title, content, is_english):
@@ -284,7 +369,7 @@ def rewrite_with_ai(title, content, is_english):
         "শুধু JSON দাও, এই ফরম্যাটে:\n"
         '{"title": "...", "content": "...", "category": "..."}\n\n'
         f"আসল শিরোনাম: {title}\n\n"
-        f"আসল খবর:\n{content[:3500]}"
+        f"আসল খবর:\n{content[:5000]}"
     )
 
     for attempt in range(2):
@@ -309,32 +394,56 @@ def rewrite_with_ai(title, content, is_english):
 # COLLECT
 # =========================================================
 
-def collect(feed_urls, limit, per_feed, is_english, default_cat, min_len, used_ids, used_links):
+def collect(feed_urls, limit, per_feed_new, is_english, default_cat, min_len, used_ids, used_links):
     items = []
-    for feed_url in feed_urls:
+    feeds = list(feed_urls)
+    random.shuffle(feeds)   # প্রতি রানে ক্রম বদলায়, তাই শেষের ফিডগুলো কখনো বঞ্চিত হয় না
+
+    for feed_url in feeds:
         if len(items) >= limit:
             break
+        if over_budget():
+            print("  সময়সীমা শেষ, এই ধাপ এখানেই থামল")
+            break
+        if AI_DISABLED and is_english:
+            print("  AI বন্ধ, ইংরেজি খবর রিরাইট সম্ভব নয়, ধাপ শেষ")
+            break
+
         print(f"  Fetching: {feed_url}")
         entries = get_rss_items(feed_url)
+        print(f"    entries: {len(entries)}")
 
-        for entry in entries[:per_feed]:
-            if len(items) >= limit:
+        added = 0
+        stats = {"dup": 0, "short": 0, "skip": 0, "rewrite_fail": 0}
+
+        for entry in entries[:FEED_SCAN_DEPTH]:
+            if len(items) >= limit or added >= per_feed_new:
                 break
-            if time.time() - START_TIME > RUN_BUDGET:
-                print("  সময়সীমা শেষ, এই ধাপ এখানেই থামল")
-                return items
+            if over_budget():
+                break
 
-            title = clean_text(entry.get("title", ""))
+            title = re.sub(r"\s+", " ", clean_text(entry.get("title", "")))
             link = entry.get("link", "")
-            content = extract_full_content(entry)
-
-            if not title or not link or len(content) < min_len:
+            if not title or not link:
+                stats["skip"] += 1
                 continue
-            if "/video/" in link or any(w in title for w in SKIP_TITLE_WORDS):
+            if "/video/" in link or "/live/" in link or any(w in title for w in SKIP_TITLE_WORDS):
+                stats["skip"] += 1
                 continue
 
+            nlink = norm_link(link)
             sid = make_id(title + "|" + link)
-            if link in used_links or sid in used_ids:
+            if nlink in used_links or sid in used_ids:
+                stats["dup"] += 1
+                continue
+
+            content = extract_full_content(entry)
+            if len(content) < FULL_TEXT_MIN:
+                page_text = fetch_article_text(link)
+                if len(page_text) > len(content):
+                    content = page_text[:6000]
+            if len(content) < min_len:
+                stats["short"] += 1
                 continue
 
             print(f"    Rewriting: {title[:50]}...")
@@ -350,12 +459,22 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, min_len, used_i
                 bn_title, bn_content, ai_cat = title, content[:FALLBACK_CHARS].strip() + "...", ""
             else:
                 print("    → বাদ (বাংলা রিরাইট হয়নি)")
+                stats["rewrite_fail"] += 1
+                if AI_DISABLED:
+                    break
                 continue
+
+            bn_title = re.sub(r"\s+", " ", bn_title).strip()
 
             if is_english:
                 category = ai_cat or detect_category(bn_title, bn_content, default_cat)
             else:
                 category = category_from_link(link) or ai_cat or detect_category(bn_title, bn_content, default_cat)
+
+            if is_english:
+                region = "world"
+            else:
+                region = "world" if category_from_link(link) == "বিশ্ব" else "bd"
 
             summary = bn_content[:200].strip() + ("..." if len(bn_content) > 200 else "")
 
@@ -369,11 +488,17 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, min_len, used_i
                 "content": bn_content,
                 "image": extract_image(entry),
                 "link": link,
+                "source": source_name(link),
+                "region": region,
+                "ai_rewritten": bool(result),
                 "published_at": entry_time(entry),
             })
 
             used_ids.add(sid)
-            used_links.add(link)
+            used_links.add(nlink)
+            added += 1
+
+        print(f"    → added {added} | {stats}")
     return items
 
 # =========================================================
@@ -384,6 +509,7 @@ def main():
     print("=" * 50)
     print("DOP NEWS 24 — AI Bengali News Publisher (Gemini)")
     print("=" * 50)
+    print("trafilatura:", "yes" if trafilatura else "no (fallback parser)")
 
     data = load_news()
     all_old = data.get("articles", [])
@@ -392,15 +518,16 @@ def main():
     old_articles = [a for a in all_old if is_bengali(a.get("title", ""))]
     print(f"Old articles kept: {len(old_articles)} / {len(all_old)}")
 
-    used_ids = {a["source_id"] for a in all_old if a.get("source_id")}
-    used_links = {a["link"] for a in all_old if a.get("link")}
+    # শুধু রাখা খবরগুলো থেকে ব্যবহৃত তালিকা, নইলে বাদ পড়া খবর আর কখনো আসত না
+    used_ids = {a["source_id"] for a in old_articles if a.get("source_id")}
+    used_links = {norm_link(a["link"]) for a in old_articles if a.get("link")}
 
     print("\n[1] Bangladesh News...")
-    bd = collect(BD_FEEDS, MAX_BD_PER_RUN, 20, False, "বাংলাদেশ", 60, used_ids, used_links)
+    bd = collect(BD_FEEDS, MAX_BD_PER_RUN, PER_FEED_NEW_BD, False, "বাংলাদেশ", 60, used_ids, used_links)
     print(f"  Added Bangladesh: {len(bd)}")
 
     print("\n[2] World News...")
-    world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, 10, True, "বিশ্ব", 80, used_ids, used_links)
+    world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, PER_FEED_NEW_WORLD, True, "বিশ্ব", 40, used_ids, used_links)
     print(f"  Added World: {len(world)}")
 
     combined = bd + world + old_articles
