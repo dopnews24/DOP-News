@@ -12,42 +12,58 @@ import feedparser
 try:
     from openai import OpenAI
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    HAS_OPENAI = True
-except:
+    HAS_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
+except Exception as e:
+    client = None
     HAS_OPENAI = False
-    print("Warning: OpenAI not available, will use original text")
+    print("Warning: OpenAI import failed:", e)
+
+if not HAS_OPENAI:
+    print("Warning: OpenAI unavailable (key missing or package not installed)")
 
 # =========================================================
 # SETTINGS
 # =========================================================
 
 NEWS_FILE = "news.json"
-MAX_PER_CATEGORY = 6
 MAX_TOTAL = 50
+MAX_BD_PER_RUN = 8
+MAX_WORLD_PER_RUN = 14
 
-# বাংলাদেশের সোর্স
 BD_FEEDS = [
     "https://www.prothomalo.com/feed",
     "https://www.prothomalo.com/bangladesh/feed",
 ]
 
-# বিশ্বের সোর্স (ইংরেজি)
 WORLD_FEEDS = [
     "https://feeds.bbci.co.uk/news/world/rss.xml",
     "https://www.aljazeera.com/xml/rss/all.xml",
     "https://rss.cnn.com/rss/edition_world.rss",
-    "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best",
     "https://feeds.feedburner.com/ndtvnews-world-news",
 ]
 
-# ক্যাটাগরি ম্যাপিং
+ALLOWED_CATEGORIES = ["বাংলাদেশ", "বিশ্ব", "রাজনীতি", "অর্থনীতি", "প্রযুক্তি", "খেলা", "বিনোদন", "লাইফস্টাইল"]
+
+LINK_RULES = [
+    ("/sports", "খেলা"),
+    ("/entertainment", "বিনোদন"),
+    ("/politics", "রাজনীতি"),
+    ("/technology", "প্রযুক্তি"),
+    ("/business", "অর্থনীতি"),
+    ("/economy", "অর্থনীতি"),
+    ("/lifestyle", "লাইফস্টাইল"),
+    ("/international", "বিশ্ব"),
+]
+
 CATEGORY_KEYWORDS = {
-    "রাজনীতি": ["politic", "election", "government", "minister", "parliament", "রাজনীতি", "নির্বাচন", "সরকার"],
-    "অর্থনীতি": ["economy", "business", "market", "finance", "bank", "trade", "অর্থনীতি", "ব্যবসা", "বাজার"],
-    "প্রযুক্তি": ["tech", "technology", "ai", "google", "apple", "microsoft", "প্রযুক্তি", "আইটি"],
-    "খেলা": ["sport", "football", "cricket", "match", "player", "খেলা", "ক্রিকেট", "ফুটবল"],
-    "বিনোদন": ["entertainment", "movie", "film", "celebrity", "actor", "বিনোদন", "সিনেমা", "তারকা"],
+    "রাজনীতি": ["politics", "election", "parliament", "minister", "রাজনীতি", "নির্বাচন", "সংসদ", "মন্ত্রী"],
+    "অর্থনীতি": ["economy", "business", "market", "finance", "bank", "trade", "অর্থনীতি", "ব্যবসা", "বাজার", "ব্যাংক"],
+    "প্রযুক্তি": ["technology", "tech", "AI", "google", "apple", "microsoft", "প্রযুক্তি", "কৃত্রিম বুদ্ধিমত্তা"],
+    "খেলা": ["sport", "football", "cricket", "match", "খেলা", "ক্রিকেট", "ফুটবল", "ম্যাচ"],
+    "বিনোদন": ["entertainment", "movie", "film", "celebrity", "বিনোদন", "সিনেমা", "তারকা"],
 }
+
+SKIP_TITLE_WORDS = ["সারা দিনের খবর"]
 
 # =========================================================
 # HELPERS
@@ -69,6 +85,13 @@ def clean_text(text):
 
 def make_id(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:20]
+
+def is_bengali(text, min_ratio=0.6):
+    letters = re.findall(r"[A-Za-z\u0980-\u09FF]", text or "")
+    if not letters:
+        return False
+    bn = sum(1 for ch in letters if "\u0980" <= ch <= "\u09FF")
+    return bn / len(letters) >= min_ratio
 
 def load_news():
     if not os.path.exists(NEWS_FILE):
@@ -96,9 +119,9 @@ def get_rss_items(url):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         })
         if r.status_code != 200:
+            print(f"  RSS status {r.status_code}: {url}")
             return []
-        feed = feedparser.parse(r.content)
-        return feed.entries
+        return feedparser.parse(r.content).entries
     except Exception as e:
         print(f"  RSS Error ({url}): {e}")
         return []
@@ -126,7 +149,7 @@ def extract_image(entry):
                     u = item.get("url")
                     if u:
                         return u
-        except:
+        except Exception:
             pass
     try:
         enc = entry.get("enclosures")
@@ -135,7 +158,7 @@ def extract_image(entry):
                 u = item.get("href") or item.get("url")
                 if u:
                     return u
-    except:
+    except Exception:
         pass
     for raw in [entry.get("summary", ""), entry.get("description", "")]:
         m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', raw or "", flags=re.I)
@@ -143,82 +166,149 @@ def extract_image(entry):
             return m.group(1)
     return ""
 
-def detect_category(title, content, default="বিশ্ব"):
-    text = (title + " " + content).lower()
+def entry_time(entry):
+    t = entry.get("published_parsed") or entry.get("updated_parsed")
+    if t:
+        try:
+            return datetime(*t[:6], tzinfo=timezone.utc).isoformat()
+        except Exception:
+            pass
+    return datetime.now(timezone.utc).isoformat()
+
+def category_from_link(link):
+    l = (link or "").lower()
+    for key, cat in LINK_RULES:
+        if key in l:
+            return cat
+    return ""
+
+def keyword_hit(text, kw):
+    if re.search(r"[A-Za-z]", kw):
+        return re.search(r"\b" + re.escape(kw) + r"\b", text, flags=re.I) is not None
+    return kw in text
+
+def detect_category(title, content, default):
+    text = title + " " + content
     for cat, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
-            if kw.lower() in text:
+            if keyword_hit(text, kw):
                 return cat
     return default
 
 # =========================================================
-# AI REWRITE (বাংলায় রিরাইট)
+# AI REWRITE (সবসময় বাংলায়)
 # =========================================================
 
-def rewrite_to_bengali(title, content):
-    """OpenAI দিয়ে ইংরেজি নিউজ বাংলায় রিরাইট করে"""
-    if not HAS_OPENAI or not os.getenv("OPENAI_API_KEY"):
-        print("    → OpenAI নেই, আসল টেক্সট রাখা হচ্ছে")
-        return title, content[:900]
+def rewrite_with_ai(title, content, is_english):
+    """সফল হলে (বাংলা শিরোনাম, বাংলা লেখা, ক্যাটাগরি) ফেরত দেয়, ব্যর্থ হলে None"""
+    if not HAS_OPENAI:
+        return None
 
-    try:
-        prompt = f"""তুমি একজন পেশাদার বাংলা সংবাদ সম্পাদক। নিচের ইংরেজি খবরটিকে সম্পূর্ণ বাংলায় রিরাইট করো।
+    src = "ইংরেজি" if is_english else "বাংলা"
+    prompt = (
+        f"তুমি একজন অভিজ্ঞ বাংলা সংবাদ সম্পাদক। নিচের {src} খবরটি নিজের ভাষায় বাংলায় নতুন করে লেখো।\n\n"
+        "নিয়ম:\n"
+        "- শুধু বাংলায় লেখো। বিদেশি নাম ও সংস্থার নাম বাংলা অক্ষরে লেখো (যেমন: ট্রাম্প, বিবিসি)\n"
+        "- শুধু নিচের তথ্য ব্যবহার করো। নিজে থেকে কোনো তথ্য, সংখ্যা বা উদ্ধৃতি যোগ করবে না\n"
+        "- মূল লেখার বাক্য হুবহু কপি করবে না\n"
+        "- শিরোনাম সর্বোচ্চ ১৬ শব্দ\n"
+        "- মূল লেখা ছোট হলে ২-৪ বাক্যে শেষ করো। বড় হলে ১২০-২২০ শব্দ\n"
+        "- category এই তালিকা থেকে ঠিক একটি: " + ", ".join(ALLOWED_CATEGORIES) + "\n\n"
+        "শুধু JSON দাও, এই ফরম্যাটে:\n"
+        '{"title": "...", "content": "...", "category": "..."}\n\n'
+        f"আসল শিরোনাম: {title}\n\n"
+        f"আসল খবর:\n{content[:1500]}"
+    )
 
-নিয়ম:
-- শুধুমাত্র বাংলায় লেখো
-- টাইটেল আকর্ষণীয় ও সংক্ষিপ্ত হবে (সর্বোচ্চ ১৬ শব্দ)
-- কনটেন্ট ১৮০-২৮০ শব্দের মধ্যে হবে
-- মূল তথ্য বাদ দিও না
-- কোনো ইংরেজি শব্দ রাখবে না
+    for attempt in range(2):
+        try:
+            resp = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "তুমি শুধু বাংলায় লেখো এবং শুধু JSON উত্তর দাও।"},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.4,
+                max_tokens=900,
+                response_format={"type": "json_object"},
+            )
+            data = json.loads(resp.choices[0].message.content)
+            new_title = clean_text(data.get("title", ""))
+            new_content = clean_text(data.get("content", ""))
+            cat = (data.get("category") or "").strip()
+            if is_bengali(new_title) and is_bengali(new_content) and len(new_content) > 40:
+                return new_title, new_content, (cat if cat in ALLOWED_CATEGORIES else "")
+            print("    → বাংলা যাচাই ব্যর্থ, আবার চেষ্টা")
+        except Exception as e:
+            print("    → AI Error:", e)
+            time.sleep(2)
+    return None
 
-আসল টাইটেল: {title}
+# =========================================================
+# COLLECT
+# =========================================================
 
-আসল খবর:
-{content[:1100]}
+def collect(feed_urls, limit, per_feed, is_english, default_cat, used_ids, used_links):
+    items = []
+    for feed_url in feed_urls:
+        if len(items) >= limit:
+            break
+        print(f"  Fetching: {feed_url}")
+        entries = get_rss_items(feed_url)
 
-অবশ্যই এই ফরম্যাটে উত্তর দাও:
-TITLE: বাংলা টাইটেল এখানে
-CONTENT: বাংলা কনটেন্ট এখানে"""
+        for entry in entries[:per_feed]:
+            if len(items) >= limit:
+                break
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "তুমি শুধু বাংলায় লেখো। ইংরেজি ব্যবহার করবে না।"},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.55,
-            max_tokens=900
-        )
+            title = clean_text(entry.get("title", ""))
+            link = entry.get("link", "")
+            content = extract_full_content(entry)
 
-        result = response.choices[0].message.content.strip()
-        print(f"    → AI Response received ({len(result)} chars)")
+            if not title or not link or len(content) < 80:
+                continue
+            if "/video/" in link or any(w in title for w in SKIP_TITLE_WORDS):
+                continue
 
-        new_title = title
-        new_content = content[:900]
+            sid = make_id(title + "|" + link)
+            if link in used_links or sid in used_ids:
+                continue
 
-        # আরও ভালো পার্সিং
-        if "TITLE:" in result:
-            try:
-                after_title = result.split("TITLE:")[1]
-                if "CONTENT:" in after_title:
-                    new_title = after_title.split("CONTENT:")[0].strip()
-                    new_content = after_title.split("CONTENT:")[1].strip()
-                else:
-                    new_title = after_title.strip().split("\n")[0]
-            except:
-                pass
+            print(f"    Rewriting: {title[:50]}...")
+            result = rewrite_with_ai(title, content, is_english)
 
-        # যদি এখনো ইংরেজি থাকে তাহলে ফেইল ধরা
-        if re.search(r'[A-Za-z]{5,}', new_title) and not re.search(r'[\u0980-\u09FF]', new_title):
-            print("    → AI বাংলায় লিখেনি, আসল টাইটেল রাখা হচ্ছে")
-            return title, content[:900]
+            if result:
+                bn_title, bn_content, ai_cat = result
+            elif not is_english:
+                # AI না চললে বাংলা খবরের শুধু শিরোনাম ও ছোট অংশ রাখা হয়
+                bn_title, bn_content, ai_cat = title, content[:250].strip() + "...", ""
+            else:
+                print("    → বাদ (বাংলা রিরাইট হয়নি)")
+                continue
 
-        print(f"    → Success: {new_title[:40]}...")
-        return new_title, new_content
+            if is_english:
+                category = ai_cat or detect_category(bn_title, bn_content, default_cat)
+            else:
+                category = category_from_link(link) or ai_cat or detect_category(bn_title, bn_content, default_cat)
 
-    except Exception as e:
-        print(f"    → AI Error: {e}")
-        return title, content[:900]
+            summary = bn_content[:200].strip() + ("..." if len(bn_content) > 200 else "")
+
+            items.append({
+                "id": make_id(sid + str(time.time())),
+                "source_id": sid,
+                "category": category,
+                "cat_ok": True,
+                "title": bn_title,
+                "summary": summary,
+                "content": bn_content,
+                "image": extract_image(entry),
+                "link": link,
+                "published_at": entry_time(entry),
+            })
+
+            used_ids.add(sid)
+            used_links.add(link)
+            time.sleep(1.2)  # rate limit
+    return items
 
 # =========================================================
 # MAIN
@@ -230,125 +320,26 @@ def main():
     print("=" * 50)
 
     data = load_news()
-    old_articles = data.get("articles", [])
+    all_old = data.get("articles", [])
 
-    used_source_ids = set()
-    used_links = set()
-    for a in old_articles:
-        if a.get("source_id"):
-            used_source_ids.add(a["source_id"])
-        if a.get("link"):
-            used_links.add(a["link"])
+    # শুধু নতুন নিয়মে বানানো ও বাংলা শিরোনামের খবর রাখা হয়
+    old_articles = [a for a in all_old if a.get("cat_ok") and is_bengali(a.get("title", ""))]
+    print(f"Old articles kept: {len(old_articles)} / {len(all_old)}")
 
-    new_articles = []
+    used_ids = {a["source_id"] for a in old_articles if a.get("source_id")}
+    used_links = {a["link"] for a in old_articles if a.get("link")}
 
-    # ---------- ১. বাংলাদেশের খবর ----------
-    print("\n[1] Collecting Bangladesh News...")
-    bd_count = 0
-    for feed_url in BD_FEEDS:
-        if bd_count >= MAX_PER_CATEGORY:
-            break
-        entries = get_rss_items(feed_url)
-        for entry in entries:
-            if bd_count >= MAX_PER_CATEGORY:
-                break
+    print("\n[1] Bangladesh News...")
+    bd = collect(BD_FEEDS, MAX_BD_PER_RUN, 15, False, "বাংলাদেশ", used_ids, used_links)
+    print(f"  Added Bangladesh: {len(bd)}")
 
-            title = clean_text(entry.get("title", ""))
-            link = entry.get("link", "")
-            content = extract_full_content(entry)
+    print("\n[2] World News...")
+    world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, 8, True, "বিশ্ব", used_ids, used_links)
+    print(f"  Added World: {len(world)}")
 
-            if not title or not link or len(content) < 60:
-                continue
-            if link in used_links:
-                continue
-
-            sid = make_id(title + "|" + link)
-            if sid in used_source_ids:
-                continue
-
-            summary = content[:200].strip() + ("..." if len(content) > 200 else "")
-            image = extract_image(entry)
-
-            new_articles.append({
-                "id": make_id(sid + str(time.time())),
-                "source_id": sid,
-                "category": "বাংলাদেশ",
-                "title": title,
-                "summary": summary,
-                "content": content,
-                "image": image,
-                "link": link,
-                "published_at": datetime.now(timezone.utc).isoformat()
-            })
-
-            used_source_ids.add(sid)
-            used_links.add(link)
-            bd_count += 1
-
-    print(f"  Added Bangladesh: {bd_count}")
-
-    # ---------- ২. বিশ্বের খবর (AI রিরাইট) ----------
-    print("\n[2] Collecting & Rewriting World News...")
-    world_count = 0
-
-    for feed_url in WORLD_FEEDS:
-        if world_count >= 18:  # বিশ্বের জন্য বেশি জায়গা
-            break
-
-        print(f"  Fetching: {feed_url}")
-        entries = get_rss_items(feed_url)
-
-        for entry in entries[:8]:  # প্রতি ফিড থেকে কিছু
-            if world_count >= 18:
-                break
-
-            title = clean_text(entry.get("title", ""))
-            link = entry.get("link", "")
-            content = extract_full_content(entry)
-
-            if not title or not link or len(content) < 80:
-                continue
-            if link in used_links:
-                continue
-
-            sid = make_id(title + "|" + link)
-            if sid in used_source_ids:
-                continue
-
-            # AI দিয়ে বাংলায় রিরাইট
-            print(f"    Rewriting: {title[:50]}...")
-            bn_title, bn_content = rewrite_to_bengali(title, content)
-
-            # ক্যাটাগরি ডিটেক্ট
-            category = detect_category(bn_title, bn_content, default="বিশ্ব")
-
-            summary = bn_content[:200].strip() + ("..." if len(bn_content) > 200 else "")
-            image = extract_image(entry)
-
-            new_articles.append({
-                "id": make_id(sid + str(time.time())),
-                "source_id": sid,
-                "category": category,
-                "title": bn_title,
-                "summary": summary,
-                "content": bn_content,
-                "image": image,
-                "link": link,
-                "published_at": datetime.now(timezone.utc).isoformat()
-            })
-
-            used_source_ids.add(sid)
-            used_links.add(link)
-            world_count += 1
-            time.sleep(1.2)  # Rate limit
-
-    print(f"  Added World (AI rewritten): {world_count}")
-
-    print("\nTotal new articles:", len(new_articles))
-
-    # পুরোনো + নতুন মিলিয়ে
-    combined = (new_articles + old_articles)[:MAX_TOTAL]
-    data["articles"] = combined
+    combined = bd + world + old_articles
+    combined.sort(key=lambda a: a.get("published_at", ""), reverse=True)
+    data["articles"] = combined[:MAX_TOTAL]
     save_news(data)
     print("Done.")
 
