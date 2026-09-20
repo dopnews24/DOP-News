@@ -92,7 +92,8 @@ nav{
     font-size:14px;
 }
 
-.nav-inner a:hover{
+.nav-inner a:hover,
+.nav-inner a.active{
     background:#e50914;
 }
 
@@ -316,6 +317,7 @@ main{
     margin:auto;
     border-radius:10px;
     overflow:hidden;
+    position:relative;
 }
 
 .modal-img{
@@ -347,6 +349,8 @@ main{
     color:#fff;
     font-size:35px;
     cursor:pointer;
+    text-shadow:0 0 8px #000;
+    z-index:10;
 }
 
 /* FOOTER */
@@ -437,16 +441,16 @@ footer p{
     </div>
 
     <nav>
-        <div class="container nav-inner">
-            <a href="#">হোম</a>
-            <a href="#">বাংলাদেশ</a>
-            <a href="#">বিশ্ব</a>
-            <a href="#">রাজনীতি</a>
-            <a href="#">অর্থনীতি</a>
-            <a href="#">প্রযুক্তি</a>
-            <a href="#">খেলাধুলা</a>
-            <a href="#">বিনোদন</a>
-            <a href="#">লাইফস্টাইল</a>
+        <div class="container nav-inner" id="navInner">
+            <a href="#" data-cat="হোম" class="active">হোম</a>
+            <a href="#" data-cat="বাংলাদেশ">বাংলাদেশ</a>
+            <a href="#" data-cat="বিশ্ব">বিশ্ব</a>
+            <a href="#" data-cat="রাজনীতি">রাজনীতি</a>
+            <a href="#" data-cat="অর্থনীতি">অর্থনীতি</a>
+            <a href="#" data-cat="প্রযুক্তি">প্রযুক্তি</a>
+            <a href="#" data-cat="খেলাধুলা">খেলাধুলা</a>
+            <a href="#" data-cat="বিনোদন">বিনোদন</a>
+            <a href="#" data-cat="লাইফস্টাইল">লাইফস্টাইল</a>
         </div>
     </nav>
 
@@ -490,7 +494,7 @@ footer p{
     <div id="error" class="error-box" style="display:none;">
 
         <h2>
-            সংবাদ পাওয়া যাচ্ছে না
+            সংবাদ পাওয়া যাচ্ছে না
         </h2>
 
         <p id="errorText">
@@ -596,7 +600,10 @@ footer p{
 ===================================================== */
 
 let ALL_ARTICLES = [];
-let CURRENT_CATEGORY = "হোম";
+
+const CATEGORY_MAP = {
+    "খেলাধুলা": "খেলা"
+};
 
 function timeAgo(dateStr){
     const diff = (Date.now() - new Date(dateStr)) / 1000;
@@ -604,6 +611,15 @@ function timeAgo(dateStr){
     if(diff < 3600) return Math.floor(diff/60) + " মিনিট আগে";
     if(diff < 86400) return Math.floor(diff/3600) + " ঘণ্টা আগে";
     return Math.floor(diff/86400) + " দিন আগে";
+}
+
+function escapeHtml(str){
+    if(!str) return "";
+    return String(str)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
 }
 
 async function loadNews(){
@@ -622,7 +638,7 @@ async function loadNews(){
         const data = await res.json();
         const articles = data.articles || [];
 
-        if(articles.length === 0) throw new Error("empty");
+        if(articles.length === 0) throw new Error("খালি");
 
         ALL_ARTICLES = articles;
 
@@ -631,7 +647,6 @@ async function loadNews(){
         loading.style.display = "none";
         newsArea.style.display = "block";
 
-        // ticker
         const ticker = document.getElementById("ticker");
         ticker.textContent = articles
             .slice(0,5)
@@ -648,52 +663,56 @@ async function loadNews(){
 }
 
 function renderNews(articles){
-    if(articles.length === 0){
-        document.getElementById("featuredMain").innerHTML =
+    const featuredMain = document.getElementById("featuredMain");
+    const sideNews = document.getElementById("sideNews");
+    const newsGrid = document.getElementById("newsGrid");
+
+    if(!articles || articles.length === 0){
+        featuredMain.innerHTML =
             "<p style='padding:20px'>এই বিভাগে কোনো সংবাদ নেই।</p>";
-        document.getElementById("sideNews").innerHTML = "";
-        document.getElementById("newsGrid").innerHTML = "";
+        sideNews.innerHTML = "";
+        newsGrid.innerHTML = "";
         return;
     }
 
-    // Featured
+    // Featured (প্রথম সংবাদ)
     const main = articles[0];
-    document.getElementById("featuredMain").innerHTML = `
-        <img src="${main.image || ''}" alt="">
+    featuredMain.innerHTML = `
+        <img src="${escapeHtml(main.image || '')}" alt="">
         <div class="featured-text">
-            <h1>${main.title}</h1>
-            <p class="news-description">${main.summary || ""}</p>
+            <h1>${escapeHtml(main.title)}</h1>
+            <p class="news-description">${escapeHtml(main.summary || "")}</p>
             <div class="news-time">${timeAgo(main.published_at)}</div>
         </div>
     `;
-    document.getElementById("featuredMain").onclick = () => openModal(main);
+    featuredMain.onclick = () => openModal(main);
 
-    // Side news (next 4)
+    // Side news (পরের ৪টি)
     const side = articles.slice(1,5);
-    document.getElementById("sideNews").innerHTML = side.map(a => `
-        <div class="side-card" data-id="${a.id}">
-            <h3>${a.title}</h3>
+    sideNews.innerHTML = side.map(a => `
+        <div class="side-card">
+            <h3>${escapeHtml(a.title)}</h3>
             <div class="news-time">${timeAgo(a.published_at)}</div>
         </div>
     `).join("");
-    side.forEach((a,i) => {
-        document.querySelectorAll(".side-card")[i].onclick = () => openModal(a);
+    sideNews.querySelectorAll(".side-card").forEach((el,i) => {
+        el.onclick = () => openModal(side[i]);
     });
 
-    // Grid (rest)
+    // Grid (বাকি সব)
     const grid = articles.slice(5);
-    document.getElementById("newsGrid").innerHTML = grid.map(a => `
-        <div class="news-card" data-id="${a.id}">
-            <img class="news-image" src="${a.image || ''}" alt="">
+    newsGrid.innerHTML = grid.map(a => `
+        <div class="news-card">
+            <img class="news-image" src="${escapeHtml(a.image || '')}" alt="">
             <div class="news-content">
-                <div class="news-title">${a.title}</div>
-                <div class="news-description">${(a.summary || "").slice(0,120)}...</div>
+                <div class="news-title">${escapeHtml(a.title)}</div>
+                <div class="news-description">${escapeHtml((a.summary || "").slice(0,120))}...</div>
                 <div class="news-time">${timeAgo(a.published_at)}</div>
             </div>
         </div>
     `).join("");
-    grid.forEach((a,i) => {
-        document.querySelectorAll(".news-card")[i].onclick = () => openModal(a);
+    newsGrid.querySelectorAll(".news-card").forEach((el,i) => {
+        el.onclick = () => openModal(grid[i]);
     });
 }
 
@@ -701,28 +720,44 @@ function openModal(article){
     document.getElementById("modalImage").src = article.image || "";
     document.getElementById("modalTitle").textContent = article.title;
     document.getElementById("modalDescription").innerHTML =
-        `<p>${article.summary || ""}</p>
+        `<p>${escapeHtml(article.summary || "")}</p>
          <p style="margin-top:15px;color:#888;font-size:14px">
-            ${article.category || ""} • ${timeAgo(article.published_at)}
+            ${escapeHtml(article.category || "")} • ${timeAgo(article.published_at)}
          </p>`;
     document.getElementById("modal").style.display = "block";
+    document.body.style.overflow = "hidden";
 }
 
 function closeModal(){
     document.getElementById("modal").style.display = "none";
+    document.body.style.overflow = "";
 }
 
-// Category filter
-document.querySelectorAll(".nav-inner a").forEach(link => {
+// ক্লিক করলে মডাল বন্ধ
+document.getElementById("modal").addEventListener("click", (e) => {
+    if(e.target.id === "modal") closeModal();
+});
+
+// ESC চাপলে মডাল বন্ধ
+document.addEventListener("keydown", (e) => {
+    if(e.key === "Escape") closeModal();
+});
+
+// ক্যাটাগরি ফিল্টার
+document.querySelectorAll("#navInner a").forEach(link => {
     link.addEventListener("click", (e) => {
         e.preventDefault();
-        const cat = link.textContent.trim();
+
+        document.querySelectorAll("#navInner a")
+            .forEach(l => l.classList.remove("active"));
+        link.classList.add("active");
+
+        const cat = link.getAttribute("data-cat");
 
         if(cat === "হোম"){
             renderNews(ALL_ARTICLES);
         }else{
-            const map = {"খেলাধুলা":"খেলা"};
-            const realCat = map[cat] || cat;
+            const realCat = CATEGORY_MAP[cat] || cat;
             const filtered = ALL_ARTICLES.filter(a => a.category === realCat);
             renderNews(filtered);
         }
@@ -730,39 +765,10 @@ document.querySelectorAll(".nav-inner a").forEach(link => {
     });
 });
 
-// Start
+// শুরু
 loadNews();
+
 </script>
-const RSS_API =
-    "https://api.rss2json.com/v1/api.json?rss_url=";
 
-
-/*
-   RSS FEEDS
-*/
-
-const FEEDS = [
-
-    {
-        name:"BBC",
-        url:
-        "https://feeds.bbci.co.uk/news/world/rss.xml"
-    },
-
-    {
-        name:"CNN",
-        url:
-        "https://rss.cnn.com/rss/edition.rss"
-    },
-
-    {
-        name:"Al Jazeera",
-        url:
-        "https://www.aljazeera.com/xml/rss/all.xml"
-    }
-
-];
-
-
-/* =====================================================
-  
+</body>
+</html>
