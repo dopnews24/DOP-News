@@ -4,7 +4,6 @@ import hashlib
 import re
 import html
 from datetime import datetime, timezone
-from urllib.parse import urlparse
 
 import requests
 import feedparser
@@ -15,26 +14,21 @@ import feedparser
 # =========================================================
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-MODEL = "gpt-5.6-luna"
+
+# ✅ সঠিক মডেল নাম
+MODEL = "gpt-4o-mini"
 
 NEWS_FILE = "news.json"
 
 MAX_PER_CATEGORY = 5
 MAX_TOTAL = 20
 
-# সরাসরি বিশ্বস্ত নিউজের RSS Feeds (ছবি ও বিস্তারিত তথ্যের জন্য সেরা)
+# ✅ সব বাংলা RSS ফিড (BBC/CNN বাদ দিয়ে)
 FEEDS = {
-    "বাংলাদেশ":
-        "https://www.prothomalo.com/feed",
-
-    "বিশ্ব":
-        "https://feeds.bbci.co.uk/news/world/rss.xml",
-
-    "খেলা":
-        "https://feeds.bbci.co.uk/sport/rss.xml",
-
-    "প্রযুক্তি":
-        "https://www.wired.com/feed/rss"
+    "বাংলাদেশ": "https://www.prothomalo.com/feed",
+    "বিশ্ব": "https://bangla.bdnews24.com/rss.xml",
+    "খেলা": "https://www.prothomalo.com/sports/feed",
+    "প্রযুক্তি": "https://bangla.bdnews24.com/tech/rss.xml"
 }
 
 
@@ -45,14 +39,12 @@ FEEDS = {
 def clean_text(text):
     if not text:
         return ""
-
     text = html.unescape(str(text))
     text = re.sub(r"<script.*?</script>", " ", text, flags=re.I | re.S)
     text = re.sub(r"<style.*?</style>", " ", text, flags=re.I | re.S)
     text = re.sub(r"<[^>]+>", " ", text)
     text = text.replace("\xa0", " ")
     text = re.sub(r"\s+", " ", text)
-
     return text.strip()
 
 
@@ -63,17 +55,13 @@ def make_id(text):
 def load_news():
     if not os.path.exists(NEWS_FILE):
         return {"updated_at": "", "articles": []}
-
     try:
         with open(NEWS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-
         if not isinstance(data, dict):
             return {"updated_at": "", "articles": []}
-
         if not isinstance(data.get("articles"), list):
             data["articles"] = []
-
         return data
     except Exception as e:
         print("news.json read error:", e)
@@ -82,10 +70,8 @@ def load_news():
 
 def save_news(data):
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-
     with open(NEWS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
     print("news.json saved:", len(data["articles"]), "articles")
 
 
@@ -95,10 +81,11 @@ def save_news(data):
 
 SOURCE_WORDS = [
     "ndtv", "cnn", "bbc", "reuters", "yahoo", "fox news", "foxsports",
-    "click2houston", "anandabazar", "आनन्दबाजार", "প্রথম আলো", "যুগান্তর",
+    "click2houston", "anandabazar", "আনন্দবাজার", "প্রথম আলো", "যুগান্তর",
     "কালের কণ্ঠ", "সমকাল", "ইত্তেফাক", "বাংলাদেশ প্রতিদিন", "dhaka tribune",
     "the daily star", "tbs", "new age", "associated press", "ap news",
-    "al jazeera", "guardian", "washington post", "new york times", "financial times"
+    "al jazeera", "guardian", "washington post", "new york times", "financial times",
+    "বিডিনিউজ২৪", "bdnews24", "বাংলা ট্রিবিউন", "bangla tribune"
 ]
 
 
@@ -112,9 +99,7 @@ def remove_source_from_title(title):
     title = re.sub(pattern, "", title, flags=re.I)
     title = re.sub(
         r"\s*[-|–—]\s*[A-Za-z0-9.-]+\.(?:com|net|org|co\.uk|co\.in)\s*$",
-        "",
-        title,
-        flags=re.I
+        "", title, flags=re.I
     )
     return title.strip(" -–—|")
 
@@ -123,7 +108,6 @@ def remove_source_references(text):
     text = clean_text(text)
     lines = re.split(r"(?<=[.!?।])\s+", text)
     clean_lines = []
-
     for line in lines:
         low = line.lower()
         if any(k in low for k in ["source:", "reference:", "সূত্র:", "রেফারেন্স:"]):
@@ -133,7 +117,6 @@ def remove_source_references(text):
         if any(word in low for word in SOURCE_WORDS) and len(line) < 120:
             continue
         clean_lines.append(line.strip())
-
     return " ".join(clean_lines).strip()
 
 
@@ -145,11 +128,8 @@ def get_rss_items(url):
     print("\nReading RSS:", url)
     try:
         response = requests.get(
-            url,
-            timeout=30,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
+            url, timeout=30,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
         )
         response.raise_for_status()
         feed = feedparser.parse(response.content)
@@ -165,7 +145,6 @@ def get_rss_items(url):
 # =========================================================
 
 def extract_rss_image(entry):
-    # 1. media_content
     try:
         media = entry.get("media_content")
         if media:
@@ -176,7 +155,6 @@ def extract_rss_image(entry):
     except Exception:
         pass
 
-    # 2. media_thumbnail
     try:
         thumb = entry.get("media_thumbnail")
         if thumb:
@@ -187,7 +165,6 @@ def extract_rss_image(entry):
     except Exception:
         pass
 
-    # 3. enclosures
     try:
         enclosures = entry.get("enclosures")
         if enclosures:
@@ -198,7 +175,6 @@ def extract_rss_image(entry):
     except Exception:
         pass
 
-    # 4. HTML inside summary/description
     try:
         raw = entry.get("summary") or entry.get("description") or ""
         match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', raw, flags=re.I)
@@ -213,33 +189,25 @@ def extract_rss_image(entry):
 def extract_og_image(url):
     if not url:
         return ""
-
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-
     try:
         response = requests.get(url, timeout=15, headers=headers, allow_redirects=True)
         if response.status_code != 200:
             return ""
-
         page = response.text
-
         match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', page, flags=re.I)
         if match:
             return html.unescape(match.group(1))
-
         match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', page, flags=re.I)
         if match:
             return html.unescape(match.group(1))
-
         match = re.search(r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']', page, flags=re.I)
         if match:
             return html.unescape(match.group(1))
-
     except Exception as e:
         print("OG image error:", e)
-
     return ""
 
 
@@ -275,79 +243,66 @@ def make_unique_visual(category, title):
 
 
 def get_best_image(entry, article_url, used_images, category, title):
-    # 1. RSS Image
     image = extract_rss_image(entry)
     if image and image not in used_images:
         return image
 
-    # 2. Extract OG Image
     if article_url:
         og = extract_og_image(article_url)
         if og and og not in used_images:
             return og
 
-    # 3. Unique SVG Fallback
     return make_unique_visual(category, title)
 
 
 # =========================================================
-# AI WRITER (DETAILED PARAGRAPHS)
+# AI WRITER (বিস্তারিত প্যারাগ্রাফ + বাংলা অনুবাদ)
 # =========================================================
 
 def rewrite_with_ai(title, description, category):
     if not OPENAI_API_KEY:
-        print("ERROR: OPENAI_API_KEY missing")
+        print("WARNING: OPENAI_API_KEY missing — fallback used")
         return None
 
     title = remove_source_from_title(title)
     description = remove_source_references(description)
 
     prompt = f"""
-তুমি DOP NEWS 24-এর একজন পেশাদার সংবাদ সম্পাদক।
+তুমি DOP NEWS 24-এর একজন পেশাদার বাংলা সংবাদ সম্পাদক।
 
 বিভাগ: {category}
 মূল শিরোনাম: {title}
 প্রাপ্ত বিবরণ: {description}
 
-উপরের তথ্যের ভিত্তিতে একটি সম্পূর্ণ এবং অত্যন্ত বিস্তারিত বাংলা সংবাদ তৈরি করো।
+নিচের নিয়ম মেনে একটি সম্পূর্ণ বাংলা সংবাদ তৈরি করো:
 
-অত্যন্ত গুরুত্বপূর্ণ নিয়ম:
-1. কোনো সংবাদপত্র, টিভি চ্যানেল বা ওয়েবসাইটের নাম উল্লেখ করবে না।
-2. সংবাদটি বাধ্যতামূলকভাবে ৩ থেকে ৫টি ছোট ও সুগঠিত অনুচ্ছেদে (paragraphs) বিস্তারিত লিখবে।
-3. প্রতিটি অনুচ্ছেদের মাঝে দুটি নতুন লাইন (\\n\\n) থাকবে যাতে পড়ার সময় প্যারাগ্রাফ আলাদা বোঝা যায়।
-4. তথ্য সংক্ষেপ না করে যতটা সম্ভব বিস্তারিতভাবে ঘটনাটি বর্ণনা করবে।
+১. মূল শিরোনাম যদি ইংরেজি হয়, অবশ্যই বাংলায় অনুবাদ করবে।
+২. কোনো সংবাদপত্র, টিভি চ্যানেল বা ওয়েবসাইটের নাম উল্লেখ করবে না।
+৩. সংবাদটি ৩ থেকে ৫টি সুগঠিত প্যারাগ্রাফে লিখবে।
+৪. প্রতিটি প্যারাগ্রাফের মাঝে দুটি newline (\\n\\n) থাকবে।
+৫. প্যারাগ্রাফগুলো যেন সংবাদের ধারাবাহিকতা বজায় রাখে।
+৬. প্রথম প্যারাগ্রাফে মূল ঘটনা, পরের প্যারাগ্রাফে বিস্তারিত, শেষে প্রেক্ষাপট।
 
-JSON উত্তর ফরম্যাট:
+শুধুমাত্র নিচের JSON ফরম্যাটে উত্তর দাও, আর কিছু লিখো না:
 {{
-  "title": "নতুন বাংলা সংবাদ শিরোনাম",
-  "summary": "প্রথম অনুচ্ছেদ...\\n\\nদ্বিতীয় অনুচ্ছেদ...\\n\\nতৃতীয় অনুচ্ছেদ..."
+  "title": "বাংলা শিরোনাম এখানে",
+  "content": "প্রথম প্যারাগ্রাফ...\\n\\nদ্বিতীয় প্যারাগ্রাফ...\\n\\nতৃতীয় প্যারাগ্রাফ..."
 }}
 """
 
     payload = {
         "model": MODEL,
-        "input": prompt,
-        "text": {
-            "format": {
-                "type": "json_schema",
-                "name": "dop_news_article",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "summary": {"type": "string"}
-                    },
-                    "required": ["title", "summary"],
-                    "additionalProperties": False
-                }
-            }
-        }
+        "messages": [
+            {"role": "system", "content": "তুমি একজন পেশাদার বাংলা সংবাদ সম্পাদক। সবসময় বৈধ JSON ফরম্যাটে উত্তর দাও।"},
+            {"role": "user", "content": prompt}
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.7
     }
 
     try:
         response = requests.post(
-            "https://api.openai.com/v1/responses",
+            "https://api.openai.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
             json=payload,
             timeout=120
@@ -358,25 +313,16 @@ JSON উত্তর ফরম্যাট:
             return None
 
         result = response.json()
-        output_text = ""
-
-        for output in result.get("output", []):
-            if output.get("type") == "message":
-                for content in output.get("content", []):
-                    if content.get("type") == "output_text":
-                        output_text += content.get("text", "")
-
-        if not output_text:
-            return None
-
+        output_text = result["choices"][0]["message"]["content"]
         article = json.loads(output_text)
-        new_title = remove_source_from_title(article.get("title", ""))
-        new_summary = remove_source_references(article.get("summary", ""))
 
-        if not new_title or not new_summary:
+        new_title = remove_source_from_title(article.get("title", ""))
+        new_content = remove_source_references(article.get("content", ""))
+
+        if not new_title or not new_content:
             return None
 
-        return {"title": new_title, "summary": new_summary}
+        return {"title": new_title, "content": new_content}
 
     except Exception as e:
         print("AI ERROR:", e)
@@ -429,12 +375,12 @@ def main():
 
             if ai:
                 final_title = ai["title"]
-                final_summary = ai["summary"]
+                final_content = ai["content"]
                 print("AI article OK")
             else:
                 final_title = remove_source_from_title(clean_title)
-                final_summary = remove_source_references(raw_description)
-                if not final_summary:
+                final_content = remove_source_references(raw_description)
+                if not final_content:
                     print("Skipped: no clean content")
                     continue
                 print("Fallback text used")
@@ -447,7 +393,8 @@ def main():
                 "source_id": source_id,
                 "category": category,
                 "title": final_title,
-                "summary": final_summary,
+                "summary": final_content[:200] + "...",
+                "content": final_content,
                 "image": image,
                 "published_at": datetime.now(timezone.utc).isoformat()
             }
