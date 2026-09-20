@@ -13,10 +13,14 @@ import feedparser
 # SETTINGS
 # =========================================================
 
+START_TIME = time.time()
+RUN_BUDGET = int(os.getenv("RUN_BUDGET") or "480")        # পুরো রানের সর্বোচ্চ সেকেন্ড
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT") or "40")
+
 NEWS_FILE = "news.json"
 MAX_TOTAL = 80
 MAX_BD_PER_RUN = 4        # ফ্রি সীমার জন্য কম রাখা হয়েছে, বাড়াতে পারেন
-MAX_WORLD_PER_RUN = 8
+MAX_WORLD_PER_RUN = 6
 FALLBACK_CHARS = 500      # AI না চললে বাংলা খবরের যতটুকু অংশ রাখা হবে
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY", "").strip()
@@ -209,6 +213,10 @@ def call_gemini(prompt):
     global AI_DISABLED, ACTIVE_MODEL
     if AI_DISABLED:
         return None
+    if time.time() - START_TIME > RUN_BUDGET:
+        AI_DISABLED = True
+        print("    → সময়সীমা শেষ, এই রানে AI বন্ধ")
+        return None
 
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -224,26 +232,28 @@ def call_gemini(prompt):
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         for attempt in range(2):
+            t0 = time.time()
             try:
-                r = requests.post(url, headers=headers, json=body, timeout=90)
+                r = requests.post(url, headers=headers, json=body, timeout=REQUEST_TIMEOUT)
             except Exception as e:
-                print("    → Network error:", e)
-                time.sleep(3)
-                continue
+                print(f"    → Network/timeout ({model}): {e}")
+                break  # পরের মডেল চেষ্টা
+            secs = round(time.time() - t0, 1)
 
             if r.status_code == 200:
                 ACTIVE_MODEL = model
+                print(f"    → OK {model} {secs}s")
                 try:
                     return r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 except Exception:
                     print("    → খালি বা ব্লক করা উত্তর")
                     return None
 
-            print(f"    → Gemini {r.status_code} ({model}): {r.text[:160]}")
+            print(f"    → Gemini {r.status_code} ({model}, {secs}s): {r.text[:160]}")
 
             if r.status_code == 429:
                 if attempt == 0:
-                    time.sleep(35)   # প্রতি মিনিটের সীমা হলে অপেক্ষা
+                    time.sleep(30)   # প্রতি মিনিটের সীমা হলে অপেক্ষা
                     continue
                 AI_DISABLED = True
                 print("    → সীমা শেষ, এই রানে AI বন্ধ")
@@ -252,9 +262,7 @@ def call_gemini(prompt):
                 AI_DISABLED = True
                 print("    → key সমস্যা, AI বন্ধ")
                 return None
-            if r.status_code in (400, 404):
-                break  # পরের মডেল চেষ্টা
-            time.sleep(4)
+            break  # 400, 404, 5xx: পরের মডেল চেষ্টা
     return None
 
 def rewrite_with_ai(title, content, is_english):
@@ -312,6 +320,9 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, min_len, used_i
         for entry in entries[:per_feed]:
             if len(items) >= limit:
                 break
+            if time.time() - START_TIME > RUN_BUDGET:
+                print("  সময়সীমা শেষ, এই ধাপ এখানেই থামল")
+                return items
 
             title = clean_text(entry.get("title", ""))
             link = entry.get("link", "")
@@ -329,7 +340,7 @@ def collect(feed_urls, limit, per_feed, is_english, default_cat, min_len, used_i
             print(f"    Rewriting: {title[:50]}...")
             used_ai = not AI_DISABLED
             result = rewrite_with_ai(title, content, is_english)
-            if used_ai:
+            if used_ai and not AI_DISABLED:
                 time.sleep(AI_DELAY)
 
             if result:
@@ -396,7 +407,7 @@ def main():
     combined.sort(key=lambda a: a.get("published_at", ""), reverse=True)
     data["articles"] = combined[:MAX_TOTAL]
     save_news(data)
-    print("Done.")
+    print(f"Done in {round(time.time() - START_TIME)}s.")
 
 if __name__ == "__main__":
     main()
