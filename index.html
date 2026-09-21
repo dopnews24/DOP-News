@@ -259,8 +259,8 @@ const HIDE_NON_BENGALI = true;
 const BN = /[\u0980-\u09FF]/;
 const PAGE_SIZE = 15;
 
-// ✨ ডিফল্ট ছবি (কোনো ছবি না থাকলে এটি দেখাবে)
-const DEFAULT_IMAGE = "https://via.placeholder.com/600x400/e50914/ffffff?text=DOP+NEWS+24";
+// ✅ ঠিক করা ডিফল্ট ছবি (SVG ডেটা URI - কোনো এক্সটার্নাল সাইট দরকার নেই)
+const DEFAULT_IMAGE = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Crect fill='%23e50914' width='600' height='400'/%3E%3Ctext x='50%25' y='50%25' fill='white' font-size='30' font-family='Arial' font-weight='bold' text-anchor='middle' dominant-baseline='middle'%3EDOP NEWS 24%3C/text%3E%3C/svg%3E";
 
 function fixCat(a) {
   const l = (a.link || "").toLowerCase();
@@ -274,9 +274,12 @@ function fixCat(a) {
   return a.category || "বাংলাদেশ";
 }
 
-// ✨ ছবির লিংক বের করার হেল্পার ফাংশন (বিভিন্ন ফিল্ড চেক করবে)
+// ✅ ঠিক করা ছবির লিংক ফাংশন (CORS সমস্যা সমাধানে weserv.nl প্রক্সি ব্যবহার করে)
 function getImageUrl(a) {
-  return a.image || a.urlToImage || a.image_url || a.thumbnail || a.media || DEFAULT_IMAGE;
+  let img = a.image || a.urlToImage || a.image_url || a.thumbnail || a.media || "";
+  if (!img || img.trim() === "") return DEFAULT_IMAGE;
+  if (img.startsWith("data:")) return img;
+  return "https://images.weserv.nl/?url=" + encodeURIComponent(img.replace(/^https?:\/\//, ""));
 }
 
 function sourceTag(a) {
@@ -416,7 +419,7 @@ function showCategory(cat) {
   }
 
   const main = list[0];
-  const mainImg = getImageUrl(main); // ✨
+  const mainImg = getImageUrl(main);
   fm.innerHTML = `
     <img src="${escapeHtml(mainImg)}" alt="" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}'">
     <div class="featured-text">
@@ -449,7 +452,7 @@ function showCategory(cat) {
   const grid = rest.slice(pageStart, pageStart + PAGE_SIZE);
 
   ng.innerHTML = grid.map(a => {
-    const img = getImageUrl(a); // ✨
+    const img = getImageUrl(a);
     return `
     <div class="news-card">
       <img class="news-image" src="${escapeHtml(img)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}'">
@@ -471,7 +474,7 @@ function showCategory(cat) {
 }
 
 function openModal(a) {
-  const img = getImageUrl(a); // ✨
+  const img = getImageUrl(a);
   const imgEl = document.getElementById("modalImage");
   imgEl.src = img;
   imgEl.onerror = function() { this.onerror = null; this.src = DEFAULT_IMAGE; };
