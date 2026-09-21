@@ -80,6 +80,13 @@ footer p{color:#aaa;margin-top:8px}
 
 .empty{padding:30px;text-align:center;color:#888;background:#fff;border-radius:8px}
 
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:28px}
+.page-btn{min-width:40px;height:40px;padding:0 10px;border-radius:6px;border:1px solid #ddd;background:#fff;color:#111;font-weight:bold;font-size:14px;cursor:pointer}
+.page-btn:hover:not(:disabled){background:#f0f0f0}
+.page-btn.active{background:#e50914;border-color:#e50914;color:#fff}
+.page-btn:disabled{opacity:.4;cursor:default}
+.page-ellipsis{padding:0 6px;color:#888}
+
 @media(max-width:900px){
 .news-grid{grid-template-columns:repeat(2,1fr)}
 .featured{grid-template-columns:1fr}
@@ -143,6 +150,7 @@ footer p{color:#aaa;margin-top:8px}
 </div>
 <div class="section-title" id="gridTitle">সর্বশেষ সংবাদ</div>
 <div class="news-grid" id="newsGrid"></div>
+<div class="pagination" id="pagination"></div>
 </div>
 </main>
 
@@ -174,7 +182,8 @@ const TRANSLATIONS = {
     errorTitle: "সংবাদ পাওয়া যাচ্ছে না", errorText: "কিছুক্ষণ পর আবার চেষ্টা করুন।", retry: "আবার চেষ্টা করুন",
     breaking: "ব্রেকিং", footerDesc: "সর্বশেষ দেশ ও বিশ্বের সংবাদ",
     empty: "এই বিভাগে এখনো কোনো সংবাদ নেই।",
-    justNow: "এইমাত্র", minAgo: "মিনিট আগে", hourAgo: "ঘণ্টা আগে", dayAgo: "দিন আগে"
+    justNow: "এইমাত্র", minAgo: "মিনিট আগে", hourAgo: "ঘণ্টা আগে", dayAgo: "দিন আগে",
+    prev: "আগের", next: "পরের"
   },
   en: {
     nav: { home:"Home", bangladesh:"Bangladesh", world:"World", politics:"Politics", economy:"Economy", technology:"Technology", sports:"Sports", entertainment:"Entertainment", lifestyle:"Lifestyle" },
@@ -183,7 +192,8 @@ const TRANSLATIONS = {
     errorTitle: "Unable to load news", errorText: "Please try again later.", retry: "Retry",
     breaking: "BREAKING", footerDesc: "Latest national & world news",
     empty: "No news available in this category yet.",
-    justNow: "Just now", minAgo: "min ago", hourAgo: "hours ago", dayAgo: "days ago"
+    justNow: "Just now", minAgo: "min ago", hourAgo: "hours ago", dayAgo: "days ago",
+    prev: "Prev", next: "Next"
   },
   hi: {
     nav: { home:"होम", bangladesh:"बांग्लादेश", world:"विश्व", politics:"राजनीति", economy:"अर्थव्यवस्था", technology:"प्रौद्योगिकी", sports:"खेल", entertainment:"मनोरंजन", lifestyle:"लाइफस्टाइल" },
@@ -192,7 +202,8 @@ const TRANSLATIONS = {
     errorTitle: "समाचार उपलब्ध नहीं", errorText: "कृपया बाद में पुनः प्रयास करें।", retry: "पुनः प्रयास करें",
     breaking: "ब्रेकिंग", footerDesc: "देश और दुनिया की ताज़ा खबरें",
     empty: "इस श्रेणी में अभी कोई समाचार नहीं है।",
-    justNow: "अभी", minAgo: "मिनट पहले", hourAgo: "घंटे पहले", dayAgo: "दिन पहले"
+    justNow: "अभी", minAgo: "मिनट पहले", hourAgo: "घंटे पहले", dayAgo: "दिन पहले",
+    prev: "पिछला", next: "अगला"
   },
   ar: {
     nav: { home:"الرئيسية", bangladesh:"بنغلاديش", world:"العالم", politics:"السياسة", economy:"الاقتصاد", technology:"التكنولوجيا", sports:"الرياضة", entertainment:"الترفيه", lifestyle:"نمط الحياة" },
@@ -201,7 +212,8 @@ const TRANSLATIONS = {
     errorTitle: "تعذر تحميل الأخبار", errorText: "يرجى المحاولة مرة أخرى لاحقاً.", retry: "إعادة المحاولة",
     breaking: "عاجل", footerDesc: "آخر أخبار البلاد والعالم",
     empty: "لا توجد أخبار في هذا القسم حتى الآن.",
-    justNow: "الآن", minAgo: "دقيقة مضت", hourAgo: "ساعات مضت", dayAgo: "أيام مضت"
+    justNow: "الآن", minAgo: "دقيقة مضت", hourAgo: "ساعات مضت", dayAgo: "أيام مضت",
+    prev: "السابق", next: "التالي"
   },
   ur: {
     nav: { home:"ہوم", bangladesh:"بنگلہ دیش", world:"دنیا", politics:"سیاست", economy:"معیشت", technology:"ٹیکنالوجی", sports:"کھیل", entertainment:"تفریح", lifestyle:"لائف اسٹائل" },
@@ -210,7 +222,8 @@ const TRANSLATIONS = {
     errorTitle: "خبریں دستیاب نہیں", errorText: "براہ کرم بعد میں دوبارہ کوشش کریں۔", retry: "دوبارہ کوشش کریں",
     breaking: "بریکنگ", footerDesc: "ملک اور دنیا کی تازہ ترین خبریں",
     empty: "اس زمرے میں ابھی کوئی خبر نہیں ہے۔",
-    justNow: "ابھی", minAgo: "منٹ پہلے", hourAgo: "گھنٹے پہلے", dayAgo: "دن پہلے"
+    justNow: "ابھی", minAgo: "منٹ پہلے", hourAgo: "گھنٹے پہلے", dayAgo: "دن پہلے",
+    prev: "پچھلا", next: "اگلا"
   },
   zh: {
     nav: { home:"首页", bangladesh:"孟加拉国", world:"国际", politics:"政治", economy:"经济", technology:"科技", sports:"体育", entertainment:"娱乐", lifestyle:"生活方式" },
@@ -219,7 +232,8 @@ const TRANSLATIONS = {
     errorTitle: "无法获取新闻", errorText: "请稍后再试。", retry: "重试",
     breaking: "突发", footerDesc: "最新国内外新闻",
     empty: "此分类暂无新闻。",
-    justNow: "刚刚", minAgo: "分钟前", hourAgo: "小时前", dayAgo: "天前"
+    justNow: "刚刚", minAgo: "分钟前", hourAgo: "小时前", dayAgo: "天前",
+    prev: "上一页", next: "下一页"
   }
 };
 
@@ -239,11 +253,12 @@ const CAT_KEY = {
 // country কোড → পতাকা ইমোজি + বাংলা নাম (generate_news.py-র country/country_name ফিল্ডের সাথে মিলিয়ে)
 const COUNTRY_FLAGS = {
   BD: "🇧🇩", IN: "🇮🇳", PK: "🇵🇰", LK: "🇱🇰", NP: "🇳🇵",
-  US: "🇺🇸", UK: "🇬🇧", RU: "🇷🇺", INT: "🌐"
+  US: "🇺🇸", UK: "🇬🇧", RU: "🇷🇺", ME: "🕌", EU: "🇪🇺", INT: "🌐"
 };
 
 const HIDE_NON_BENGALI = true; // বাংলা ভাষায় ইংরেজি শিরোনামের খবর লুকাতে true, দেখাতে false
 const BN = /[\u0980-\u09FF]/;
+const PAGE_SIZE = 15; // pagination গ্রিডে প্রতি পেজে কয়টা কার্ড দেখাবে (featured+side বাদে)
 
 function fixCat(a) {
   const l = (a.link || "").toLowerCase();
@@ -268,6 +283,7 @@ function sourceTag(a) {
 let ALL_ARTICLES = [];
 let currentLang = localStorage.getItem("dop_lang") || "bn";
 let currentCategory = "হোম";
+let currentPage = 1;
 
 function t(key) {
   return TRANSLATIONS[currentLang]?.[key] || key;
@@ -309,6 +325,7 @@ function applyLanguage() {
       document.querySelectorAll("#navInner a").forEach(l => l.classList.remove("active"));
       this.classList.add("active");
       currentCategory = this.getAttribute("data-cat");
+      currentPage = 1;
       showCategory(currentCategory);
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -325,6 +342,44 @@ function applyLanguage() {
   if (ALL_ARTICLES.length > 0) {
     showCategory(currentCategory);
   }
+}
+
+function renderPagination(totalItems) {
+  const pg = document.getElementById("pagination");
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+  if (totalPages <= 1) {
+    pg.innerHTML = "";
+    return;
+  }
+
+  const tr = TRANSLATIONS[currentLang];
+  const windowSize = 1;
+
+  let html = `<button class="page-btn" data-page="prev" ${currentPage === 1 ? "disabled" : ""}>${tr.prev}</button>`;
+  let prevShown = 0;
+  for (let p = 1; p <= totalPages; p++) {
+    const isEdge = p === 1 || p === totalPages;
+    const isNear = Math.abs(p - currentPage) <= windowSize;
+    if (isEdge || isNear) {
+      if (prevShown && p - prevShown > 1) html += `<span class="page-ellipsis">…</span>`;
+      html += `<button class="page-btn ${p === currentPage ? "active" : ""}" data-page="${p}">${p}</button>`;
+      prevShown = p;
+    }
+  }
+  html += `<button class="page-btn" data-page="next" ${currentPage === totalPages ? "disabled" : ""}>${tr.next}</button>`;
+
+  pg.innerHTML = html;
+
+  pg.querySelectorAll(".page-btn").forEach(btn => {
+    btn.onclick = function() {
+      const val = this.getAttribute("data-page");
+      if (val === "prev") currentPage = Math.max(1, currentPage - 1);
+      else if (val === "next") currentPage = Math.min(totalPages, currentPage + 1);
+      else currentPage = parseInt(val, 10);
+      showCategory(currentCategory);
+      document.getElementById("gridTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+  });
 }
 
 function showCategory(cat) {
@@ -349,6 +404,7 @@ function showCategory(cat) {
     fm.innerHTML = "";
     sn.innerHTML = "";
     ng.innerHTML = `<div class="empty" style="grid-column:1/-1">${tr.empty}</div>`;
+    document.getElementById("pagination").innerHTML = "";
     return;
   }
 
@@ -378,7 +434,12 @@ function showCategory(cat) {
     el.onclick = function() { openModal(side[i]); };
   });
 
-  const grid = list.slice(5);
+  const rest = list.slice(5);
+  const totalPages = Math.max(1, Math.ceil(rest.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const grid = rest.slice(pageStart, pageStart + PAGE_SIZE);
+
   ng.innerHTML = grid.map(a => `
     <div class="news-card">
       <img class="news-image" src="${escapeHtml(a.image || '')}" alt="">
@@ -394,6 +455,8 @@ function showCategory(cat) {
   ng.querySelectorAll(".news-card").forEach((el, i) => {
     el.onclick = function() { openModal(grid[i]); };
   });
+
+  renderPagination(rest.length);
 }
 
 function openModal(a) {
@@ -424,6 +487,7 @@ document.addEventListener("keydown", function(e) {
 document.getElementById("language").addEventListener("change", function() {
   currentLang = this.value;
   localStorage.setItem("dop_lang", currentLang);
+  currentPage = 1;
   applyLanguage();
 });
 
