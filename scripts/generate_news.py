@@ -47,7 +47,7 @@ UA_HEADERS = {
 GROQ_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODELS = [
     m.strip()
-    for m in (os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile,llama-3.1-8b-instant").split(",")
+    for m in (os.getenv("GROQ_MODEL") or "openai/gpt-oss-120b,openai/gpt-oss-20b,llama-3.3-70b-versatile,llama-3.1-8b-instant").split(",")
     if m.strip()
 ]
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -67,7 +67,6 @@ if AI_DISABLED:
 
 BD_FEEDS = [
     {"url": "https://www.prothomalo.com/feed", "country": "BD"},
-    {"url": "https://bangla.bdnews24.com/rss.xml", "country": "BD"},
 ]
 
 # =========================================================
@@ -76,6 +75,9 @@ BD_FEEDS = [
 # =========================================================
 
 WORLD_FEEDS = [
+    # ---------- বাংলাদেশ, ইংরেজি সোর্স (bdnews24 স্থায়ীভাবে বন্ধ হওয়ায় বিকল্প) ----------
+    {"url": "https://en.ittefaq.com.bd/feed/", "country": "BD"},
+
     # ---------- ভারত (IN) ----------
     {"url": "https://www.thehindu.com/news/national/feeder/default.rss", "country": "IN"},
     {"url": "https://www.thehindu.com/news/international/feeder/default.rss", "country": "IN"},
