@@ -1,52 +1,229 @@
-name: DOP News Auto Publisher
+import os
+import json
+import time
+import requests
+import feedparser
+import trafilatura
+from datetime import datetime, timezone
 
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 * * * *"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-permissions:
-  contents: write
+# ============================================================
+# RSS সোর্স — দক্ষিণ এশিয়া, USA, UK, Russia, আন্তর্জাতিক
+# ============================================================
+RSS_FEEDS = [
+    # ---------- বাংলাদেশ ----------
+    {"url": "https://www.thedailystar.net/frontpage/rss.xml", "source": "The Daily Star", "country": "BD"},
+    {"url": "https://www.thedailystar.net/news/rss.xml", "source": "The Daily Star", "country": "BD"},
+    {"url": "https://www.bdnews24.com/rss.xml", "source": "bdnews24", "country": "BD"},
 
-concurrency:
-  group: dop-news
-  cancel-in-progress: false
+    # ---------- ভারত ----------
+    {"url": "https://www.thehindu.com/feeder/default.rss", "source": "The Hindu", "country": "IN"},
+    {"url": "https://www.thehindu.com/news/international/feeder/default.rss", "source": "The Hindu", "country": "IN"},
+    {"url": "https://indianexpress.com/section/india/feed/", "source": "Indian Express", "country": "IN"},
 
-jobs:
-  generate-news:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # ---------- পাকিস্তান ----------
+    {"url": "https://www.dawn.com/feeds/home", "source": "Dawn", "country": "PK"},
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    # ---------- শ্রীলঙ্কা / নেপাল ----------
+    {"url": "https://www.dailymirror.lk/RSS_Feeds/breaking-news", "source": "Daily Mirror", "country": "LK"},
+    {"url": "https://kathmandupost.com/rss", "source": "Kathmandu Post", "country": "NP"},
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+    # ---------- USA ----------
+    {"url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "source": "New York Times", "country": "US"},
+    {"url": "https://feeds.washingtonpost.com/rss/world", "source": "Washington Post", "country": "US"},
+    {"url": "https://edition.cnn.com/services/rss/", "source": "CNN", "country": "US"},
 
-      - name: Install dependencies
-        run: |
-          pip install requests feedparser trafilatura
+    # ---------- UK ----------
+    {"url": "https://feeds.bbci.co.uk/news/world/rss.xml", "source": "BBC News", "country": "UK"},
+    {"url": "https://www.theguardian.com/world/rss", "source": "The Guardian", "country": "UK"},
 
-      - name: Generate AI news
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python -u scripts/generate_news.py
+    # ---------- Russia ----------
+    {"url": "https://tass.com/rss/v2.xml", "source": "TASS", "country": "RU"},
+    {"url": "https://www.rt.com/rss/", "source": "RT", "country": "RU"},
 
-      - name: Save news.json
-        run: |
-          git config user.name "DOP News Bot"
-          git config user.email "actions@github.com"
+    # ---------- আন্তর্জাতিক ----------
+    {"url": "https://feeds.reuters.com/reuters/worldNews", "source": "Reuters", "country": "INT"},
+    {"url": "https://www.aljazeera.com/xml/rss/all.xml", "source": "Al Jazeera", "country": "INT"},
+]
 
-          git add news.json
+MAX_PER_FEED = 4          # প্রতি ফিড থেকে সর্বোচ্চ কত খবর
+MAX_TOTAL = 25            # মোট সর্বোচ্চ কত খবর প্রসেস হবে
+REQUEST_TIMEOUT = 15
 
-          if git diff --cached --quiet; then
-            echo "No new news"
-          else
-            git commit -m "Auto update news - $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git pull --rebase origin main
-            git push
-          fi
+
+# ============================================================
+# ১. RSS থেকে খবর সংগ্রহ
+# ============================================================
+def fetch_articles():
+    articles = []
+    headers = {"User-Agent": "Mozilla/5.0 (DOPNewsBot/1.0)"}
+
+    for feed in RSS_FEEDS:
+        try:
+            resp = requests.get(feed["url"], headers=headers, timeout=REQUEST_TIMEOUT)
+            parsed = feedparser.parse(resp.content)
+
+            if not parsed.entries:
+                print(f"⚠️  No entries: {feed['source']}")
+                continue
+
+            for entry in parsed.entries[:MAX_PER_FEED]:
+                articles.append({
+                    "title": entry.get("title", "").strip(),
+                    "link": entry.get("link", "").strip(),
+                    "source": feed["source"],
+                    "country": feed["country"],
+                    "published": entry.get("published", ""),
+                    "summary": entry.get("summary", ""),
+                })
+
+            print(f"✓ {feed['source']:20s} → {len(parsed.entries[:MAX_PER_FEED])} items")
+
+        except Exception as e:
+            print(f"✗ {feed['source']:20s} → {e}")
+
+    print(f"\n📥 Total fetched: {len(articles)}")
+    return articles[:MAX_TOTAL]
+
+
+# ============================================================
+# ২. মূল আর্টিকেল টেক্সট বের করা (trafilatura)
+# ============================================================
+def extract_full_text(url):
+    try:
+        downloaded = trafilatura.fetch_url(url)
+        if not downloaded:
+            return ""
+        text = trafilatura.extract(downloaded, include_comments=False, include_tables=False)
+        return (text or "")[:3000]  # টোকেন বাঁচাতে সীমিত
+    except Exception as e:
+        print(f"   ⚠️ extract failed: {e}")
+        return ""
+
+
+# ============================================================
+# ৩. Gemini API দিয়ে বাংলায় রিরাইট
+# ============================================================
+def rewrite_with_gemini(title, summary, full_text, source):
+    if not GEMINI_API_KEY:
+        return None
+
+    content_body = full_text if full_text else summary
+
+    prompt = f"""তুমি একজন অভিজ্ঞ বাংলা সংবাদ সম্পাদক। নিচের সংবাদটি পড়ে **শুধুমাত্র বাংলায়** পুনর্লিখন করো।
+
+নিয়ম:
+১. সংবাদের মূল তথ্য ঠিক রাখো, নিজের মত যোগ করো না।
+২. ২-৩ অনুচ্ছেদে লেখো (মোট ১২০-২৫০ শব্দ)।
+৩. সহজ, প্রাঞ্জল বাংলা ব্যবহার করো।
+৪. একটি আকর্ষণীয় বাংলা শিরোনাম দাও।
+৫. শেষে কোনো মন্তব্য/নোট যোগ করো না।
+৬. আউটপুট ফরম্যাট ঠিক এইরকম হবে (কোনো অতিরিক্ত টেক্সট নয়):
+
+শিরোনাম: <বাংলা শিরোনাম>
+বিবরণ: <বাংলা বিবরণ>
+
+---
+সোর্স: {source}
+মূল শিরোনাম: {title}
+সারসংক্ষেপ: {content_body[:2500]}
+---
+
+এখন বাংলায় লিখো:"""
+
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 800,
+        },
+    }
+
+    try:
+        r = requests.post(GEMINI_URL, json=payload, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return text
+    except Exception as e:
+        print(f"   ✗ Gemini error: {e}")
+        return None
+
+
+# ============================================================
+# ৪. Gemini আউটপুট পার্স
+# ============================================================
+def parse_gemini_output(text):
+    title_bn = ""
+    body_bn = ""
+
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("শিরোনাম:"):
+            title_bn = line.replace("শিরোনাম:", "").strip()
+        elif line.startswith("বিবরণ:"):
+            body_bn = line.replace("বিবরণ:", "").strip()
+        elif body_bn:
+            body_bn += "\n" + line
+
+    if not title_bn:
+        title_bn = text.split("\n")[0][:120]
+    if not body_bn:
+        body_bn = text
+
+    return title_bn, body_bn.strip()
+
+
+# ============================================================
+# ৫. মূল প্রসেস লুপ
+# ============================================================
+def build_news():
+    articles = fetch_articles()
+    output = []
+
+    for i, art in enumerate(articles, 1):
+        print(f"\n[{i}/{len(articles)}] {art['source']} → {art['title'][:70]}")
+
+        full_text = extract_full_text(art["link"])
+        gemini_out = rewrite_with_gemini(
+            art["title"], art["summary"], full_text, art["source"]
+        )
+
+        if not gemini_out:
+            print("   ⏭️ skipped (AI failed)")
+            continue
+
+        title_bn, body_bn = parse_gemini_output(gemini_out)
+
+        output.append({
+            "title_bn": title_bn,
+            "body_bn": body_bn,
+            "original_title": art["title"],
+            "source": art["source"],
+            "country": art["country"],
+            "link": art["link"],
+            "published": art["published"],
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+        time.sleep(2)  # Gemini rate limit
+
+    return output
+
+
+# ============================================================
+# ৬. news.json সেভ
+# ============================================================
+def save(news):
+    with open("news.json", "w", encoding="utf-8") as f:
+        json.dump(news, f, ensure_ascii=False, indent=2)
+    print(f"\n💾 Saved {len(news)} items → news.json")
+
+
+if __name__ == "__main__":
+    print("🚀 DOP News generator started")
+    news = build_news()
+    save(news)
+    print("✅ Done")
