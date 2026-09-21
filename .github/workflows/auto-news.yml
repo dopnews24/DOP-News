@@ -30,7 +30,7 @@ jobs:
 
       - name: Run generator
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python scripts/generate_news.py
 
       - name: Commit and push news.json
