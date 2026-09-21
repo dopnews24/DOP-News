@@ -41,23 +41,23 @@ UA_HEADERS = {
 }
 
 # =========================================================
-# OpenAI (আগে Gemini ছিল, এখন OpenAI দিয়ে রিরাইট হয়)
+# Groq (আগে OpenAI ছিল, এখন Groq দিয়ে রিরাইট হয়)
 # =========================================================
 
-OPENAI_KEY = os.getenv("OPENAI_API_KEY", "").strip()
-OPENAI_MODELS = [
+GROQ_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODELS = [
     m.strip()
-    for m in (os.getenv("OPENAI_MODEL") or "gpt-4o-mini,gpt-4.1-mini").split(",")
+    for m in (os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile,llama-3.1-8b-instant").split(",")
     if m.strip()
 ]
-OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-AI_DELAY = float(os.getenv("AI_DELAY") or "3")   # OpenAI রেট-লিমিট Gemini free tier এর চেয়ে অনেক শিথিল
-AI_DISABLED = not OPENAI_KEY
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+AI_DELAY = float(os.getenv("AI_DELAY") or "1")   # Groq এর রেট-লিমিট সাধারণত অনেক শিথিল
+AI_DISABLED = not GROQ_KEY
 ACTIVE_MODEL = ""
 DEAD_MODELS = set()       # যে মডেল পাওয়া যায়নি / বন্ধ
 
 if AI_DISABLED:
-    print("Warning: OPENAI_API_KEY missing, AI disabled")
+    print("Warning: GROQ_API_KEY missing, AI disabled")
 
 # =========================================================
 # RSS FEEDS — বাংলাদেশ (বাংলা, AI ছাড়াও fallback দিয়ে চলে)
@@ -323,10 +323,10 @@ def parse_json_text(text):
     return json.loads(text)
 
 # =========================================================
-# OPENAI CALL
+# GROQ CALL
 # =========================================================
 
-def call_openai(prompt):
+def call_groq(prompt):
     """সফল হলে উত্তরের লেখা ফেরত দেয়, নাহলে None"""
     global AI_DISABLED, ACTIVE_MODEL
     if AI_DISABLED:
@@ -337,11 +337,11 @@ def call_openai(prompt):
         return None
 
     headers = {
-        "Authorization": f"Bearer {OPENAI_KEY}",
+        "Authorization": f"Bearer {GROQ_KEY}",
         "Content-Type": "application/json",
     }
 
-    models = [m for m in OPENAI_MODELS if m not in DEAD_MODELS]
+    models = [m for m in GROQ_MODELS if m not in DEAD_MODELS]
     if ACTIVE_MODEL in models:
         models.remove(ACTIVE_MODEL)
         models.insert(0, ACTIVE_MODEL)
@@ -360,7 +360,7 @@ def call_openai(prompt):
         for attempt in range(2):
             t0 = time.time()
             try:
-                r = requests.post(OPENAI_URL, headers=headers, json=body, timeout=REQUEST_TIMEOUT)
+                r = requests.post(GROQ_URL, headers=headers, json=body, timeout=REQUEST_TIMEOUT)
             except Exception as e:
                 print(f"    → Network/timeout ({model}): {e}")
                 break  # পরের মডেল চেষ্টা
@@ -375,7 +375,7 @@ def call_openai(prompt):
                     print("    → খালি বা অপঠনযোগ্য উত্তর")
                     return None
 
-            print(f"    → OpenAI {r.status_code} ({model}, {secs}s): {r.text[:160]}")
+            print(f"    → Groq {r.status_code} ({model}, {secs}s): {r.text[:160]}")
 
             if r.status_code == 429:
                 if attempt == 0:
@@ -392,7 +392,7 @@ def call_openai(prompt):
                 DEAD_MODELS.add(model)   # মডেলের নাম ভুল বা অ্যাক্সেস নেই
             break  # 400, 5xx: পরের মডেল চেষ্টা
 
-    if all(m in DEAD_MODELS for m in OPENAI_MODELS):
+    if all(m in DEAD_MODELS for m in GROQ_MODELS):
         AI_DISABLED = True
         print("    → সব মডেল ব্যর্থ, এই রানে AI বন্ধ")
     return None
@@ -420,7 +420,7 @@ def rewrite_with_ai(title, content, is_english):
     )
 
     for attempt in range(2):
-        text = call_openai(prompt)
+        text = call_groq(prompt)
         if text is None:
             if AI_DISABLED:
                 return None
@@ -559,7 +559,7 @@ def collect(feed_list, limit, per_feed_new, is_english, default_cat, min_len, us
 
 def main():
     print("=" * 50)
-    print("DOP NEWS 24 — AI Bengali News Publisher (OpenAI)")
+    print("DOP NEWS 24 — AI Bengali News Publisher (Groq)")
     print("=" * 50)
     print("trafilatura:", "yes" if trafilatura else "no (fallback parser)")
 
