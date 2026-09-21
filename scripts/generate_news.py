@@ -21,16 +21,16 @@ except ImportError:
 # =========================================================
 
 START_TIME = time.time()
-RUN_BUDGET = int(os.getenv("RUN_BUDGET") or "600")        # পুরো রানের সর্বোচ্চ সেকেন্ড
+RUN_BUDGET = int(os.getenv("RUN_BUDGET") or "800")        # পুরো রানের সর্বোচ্চ সেকেন্ড
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT") or "40")
 
 NEWS_FILE = "news.json"
 MAX_TOTAL = int(os.getenv("MAX_TOTAL") or "300")
-MAX_BD_PER_RUN = int(os.getenv("MAX_BD_PER_RUN") or "6")
-MAX_WORLD_PER_RUN = int(os.getenv("MAX_WORLD_PER_RUN") or "24")   # আগে ১৪ ছিল, দেশ বেড়েছে তাই বাড়ানো হলো
-PER_FEED_NEW_WORLD = 2    # প্রতিটি ফিড থেকে প্রতি রানে সর্বোচ্চ নতুন খবর (যাতে একটি ফিডেই সীমা শেষ না হয়)
-PER_FEED_NEW_BD = 6
-FEED_SCAN_DEPTH = 15      # প্রতিটি ফিডের প্রথম কয়টি এন্ট্রি দেখা হবে
+MAX_BD_PER_RUN = int(os.getenv("MAX_BD_PER_RUN") or "10")
+MAX_WORLD_PER_RUN = int(os.getenv("MAX_WORLD_PER_RUN") or "45")   # মধ্যপ্রাচ্য+ইউরোপ ফিড বাড়ায় সীমাও বাড়ানো হলো
+PER_FEED_NEW_WORLD = 3    # প্রতিটি ফিড থেকে প্রতি রানে সর্বোচ্চ নতুন খবর (যাতে একটি ফিডেই সীমা শেষ না হয়)
+PER_FEED_NEW_BD = 8
+FEED_SCAN_DEPTH = 20      # প্রতিটি ফিডের প্রথম কয়টি এন্ট্রি দেখা হবে
 FULL_TEXT_MIN = 800       # ফিডের লেখা এর চেয়ে ছোট হলে আর্টিকেল পেজ থেকে পুরো লেখা আনা হবে
 FALLBACK_CHARS = int(os.getenv("FALLBACK_CHARS") or "250")   # AI না চললে বাংলা খবরের যতটুকু অংশ রাখা হবে
 
@@ -113,6 +113,15 @@ WORLD_FEEDS = [
     {"url": "https://tass.com/rss/v2.xml", "country": "RU"},
     {"url": "https://www.rt.com/rss/", "country": "RU"},
 
+    # ---------- মধ্যপ্রাচ্য (ME) ----------
+    {"url": "https://www.timesofisrael.com/feed/", "country": "ME"},
+    {"url": "https://english.alarabiya.net/rss.xml", "country": "ME"},
+    {"url": "https://www.middleeasteye.net/rss", "country": "ME"},
+
+    # ---------- ইউরোপ (EU) ----------
+    {"url": "https://www.euronews.com/rss?level=theme&name=news", "country": "EU"},
+    {"url": "https://www.politico.eu/feed/", "country": "EU"},
+
     # ---------- সাধারণ আন্তর্জাতিক (INT) ----------
     {"url": "https://www.aljazeera.com/xml/rss/all.xml", "country": "INT"},
     {"url": "https://rss.dw.com/xml/rss-en-world", "country": "INT"},
@@ -122,7 +131,7 @@ WORLD_FEEDS = [
 COUNTRY_NAMES = {
     "BD": "বাংলাদেশ", "IN": "ভারত", "PK": "পাকিস্তান", "LK": "শ্রীলঙ্কা",
     "NP": "নেপাল", "US": "যুক্তরাষ্ট্র", "UK": "যুক্তরাজ্য", "RU": "রাশিয়া",
-    "INT": "আন্তর্জাতিক",
+    "ME": "মধ্যপ্রাচ্য", "EU": "ইউরোপ", "INT": "আন্তর্জাতিক",
 }
 
 ALLOWED_CATEGORIES = ["বাংলাদেশ", "বিশ্ব", "রাজনীতি", "অর্থনীতি", "প্রযুক্তি", "খেলা", "বিনোদন", "লাইফস্টাইল"]
