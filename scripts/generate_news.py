@@ -25,9 +25,9 @@ RUN_BUDGET = int(os.getenv("RUN_BUDGET") or "600")        # পুরো রা�
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT") or "40")
 
 NEWS_FILE = "news.json"
-MAX_TOTAL = int(os.getenv("MAX_TOTAL") or "300")          # আগে ৮০ ছিল, ৪-৫ ঘণ্টার খবরেই ভরে যেত
+MAX_TOTAL = int(os.getenv("MAX_TOTAL") or "300")
 MAX_BD_PER_RUN = int(os.getenv("MAX_BD_PER_RUN") or "6")
-MAX_WORLD_PER_RUN = int(os.getenv("MAX_WORLD_PER_RUN") or "14")
+MAX_WORLD_PER_RUN = int(os.getenv("MAX_WORLD_PER_RUN") or "24")   # আগে ১৪ ছিল, দেশ বেড়েছে তাই বাড়ানো হলো
 PER_FEED_NEW_WORLD = 2    # প্রতিটি ফিড থেকে প্রতি রানে সর্বোচ্চ নতুন খবর (যাতে একটি ফিডেই সীমা শেষ না হয়)
 PER_FEED_NEW_BD = 6
 FEED_SCAN_DEPTH = 15      # প্রতিটি ফিডের প্রথম কয়টি এন্ট্রি দেখা হবে
@@ -40,48 +40,94 @@ UA_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-GEMINI_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODELS = [
+# =========================================================
+# OpenAI (আগে Gemini ছিল, এখন OpenAI দিয়ে রিরাইট হয়)
+# =========================================================
+
+OPENAI_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODELS = [
     m.strip()
-    for m in (os.getenv("GEMINI_MODEL") or "gemini-3.1-flash-lite,gemini-3-flash-preview,gemini-2.5-flash").split(",")
+    for m in (os.getenv("OPENAI_MODEL") or "gpt-4o-mini,gpt-4.1-mini").split(",")
     if m.strip()
 ]
-AI_DELAY = float(os.getenv("AI_DELAY") or "7")   # দুই রিকোয়েস্টের মাঝে সেকেন্ড
-AI_DISABLED = not GEMINI_KEY
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+AI_DELAY = float(os.getenv("AI_DELAY") or "3")   # OpenAI রেট-লিমিট Gemini free tier এর চেয়ে অনেক শিথিল
+AI_DISABLED = not OPENAI_KEY
 ACTIVE_MODEL = ""
-DEAD_MODELS = set()       # যে মডেলের কোটা শেষ বা যেটি পাওয়া যায়নি
+DEAD_MODELS = set()       # যে মডেল পাওয়া যায়নি / বন্ধ
 
 if AI_DISABLED:
-    print("Warning: GEMINI_API_KEY missing, AI disabled")
+    print("Warning: OPENAI_API_KEY missing, AI disabled")
+
+# =========================================================
+# RSS FEEDS — বাংলাদেশ (বাংলা, AI ছাড়াও fallback দিয়ে চলে)
+# =========================================================
+# প্রতিটি এন্ট্রি: {"url": ..., "country": "BD"}
+# সব ফিড চালু আছে কিনা GitHub Actions লগে "entries: N" দেখে যাচাই করুন। 0 হলে ওই ফিড বদলান/বাদ দিন।
 
 BD_FEEDS = [
-    "https://www.prothomalo.com/feed",
+    {"url": "https://www.prothomalo.com/feed", "country": "BD"},
+    {"url": "https://bangla.bdnews24.com/rss.xml", "country": "BD"},
 ]
 
-# সব ফিড চালু আছে কিনা Actions লগে "entries: N" দেখে যাচাই করুন। 0 হলে ওই ফিড বদলান।
+# =========================================================
+# RSS FEEDS — বিশ্ব (ইংরেজি, বাধ্যতামূলক AI রিরাইট প্রয়োজন)
+# দক্ষিণ এশিয়া + USA + UK + Russia + সাধারণ আন্তর্জাতিক
+# =========================================================
+
 WORLD_FEEDS = [
-    "https://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://feeds.bbci.co.uk/news/world/asia/rss.xml",
-    "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
-    "https://feeds.bbci.co.uk/news/world/africa/rss.xml",
-    "https://feeds.bbci.co.uk/news/world/europe/rss.xml",
-    "https://feeds.bbci.co.uk/news/world/latin_america/rss.xml",
-    "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml",
-    "https://www.aljazeera.com/xml/rss/all.xml",
-    "https://www.theguardian.com/world/rss",
-    "https://rss.dw.com/xml/rss-en-world",
-    "https://www.france24.com/en/rss",
-    "https://feeds.npr.org/1004/rss.xml",
-    "https://feeds.skynews.com/feeds/rss/world.xml",
-    "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-    "https://www.thehindu.com/news/international/feeder/default.rss",
-    "https://feeds.feedburner.com/ndtvnews-world-news",
+    # ---------- ভারত (IN) ----------
+    {"url": "https://www.thehindu.com/news/national/feeder/default.rss", "country": "IN"},
+    {"url": "https://www.thehindu.com/news/international/feeder/default.rss", "country": "IN"},
+    {"url": "https://indianexpress.com/section/india/feed/", "country": "IN"},
+    {"url": "https://feeds.feedburner.com/ndtvnews-world-news", "country": "IN"},
+
+    # ---------- পাকিস্তান (PK) ----------
+    {"url": "https://www.dawn.com/feeds/home", "country": "PK"},
+    {"url": "https://www.dawn.com/feeds/world", "country": "PK"},
+
+    # ---------- শ্রীলঙ্কা (LK) ----------
+    {"url": "https://www.dailymirror.lk/RSS_Feeds/breaking-news", "country": "LK"},
+
+    # ---------- নেপাল (NP) ----------
+    {"url": "https://kathmandupost.com/rss", "country": "NP"},
+
+    # ---------- USA (US) ----------
+    {"url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "country": "US"},
+    {"url": "https://feeds.washingtonpost.com/rss/world", "country": "US"},
+    {"url": "https://feeds.npr.org/1004/rss.xml", "country": "US"},
+
+    # ---------- UK (UK) ----------
+    {"url": "https://feeds.bbci.co.uk/news/world/rss.xml", "country": "UK"},
+    {"url": "https://feeds.bbci.co.uk/news/world/asia/rss.xml", "country": "UK"},
+    {"url": "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml", "country": "UK"},
+    {"url": "https://feeds.bbci.co.uk/news/world/africa/rss.xml", "country": "UK"},
+    {"url": "https://feeds.bbci.co.uk/news/world/europe/rss.xml", "country": "UK"},
+    {"url": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml", "country": "UK"},
+    {"url": "https://www.theguardian.com/world/rss", "country": "UK"},
+    {"url": "https://feeds.skynews.com/feeds/rss/world.xml", "country": "UK"},
+
+    # ---------- রাশিয়া (RU) ----------
+    {"url": "https://tass.com/rss/v2.xml", "country": "RU"},
+    {"url": "https://www.rt.com/rss/", "country": "RU"},
+
+    # ---------- সাধারণ আন্তর্জাতিক (INT) ----------
+    {"url": "https://www.aljazeera.com/xml/rss/all.xml", "country": "INT"},
+    {"url": "https://rss.dw.com/xml/rss-en-world", "country": "INT"},
+    {"url": "https://www.france24.com/en/rss", "country": "INT"},
 ]
+
+COUNTRY_NAMES = {
+    "BD": "বাংলাদেশ", "IN": "ভারত", "PK": "পাকিস্তান", "LK": "শ্রীলঙ্কা",
+    "NP": "নেপাল", "US": "যুক্তরাষ্ট্র", "UK": "যুক্তরাজ্য", "RU": "রাশিয়া",
+    "INT": "আন্তর্জাতিক",
+}
 
 ALLOWED_CATEGORIES = ["বাংলাদেশ", "বিশ্ব", "রাজনীতি", "অর্থনীতি", "প্রযুক্তি", "খেলা", "বিনোদন", "লাইফস্টাইল"]
 
 LINK_RULES = [
     ("/sports", "খেলা"),
+    ("/sport", "খেলা"),
     ("/entertainment", "বিনোদন"),
     ("/politics", "রাজনীতি"),
     ("/technology", "প্রযুক্তি"),
@@ -264,7 +310,7 @@ def keyword_hit(text, kw):
     return kw in text
 
 def detect_category(title, content, default):
-    text = title  # শুধু শিরোনাম: পুরো লেখা ধরলে "প্রকৌশল ও প্রযুক্তি বিশ্ববিদ্যালয়" এর মতো নামে ভুল ক্যাটাগরি হয়
+    text = title  # শুধু শিরোনাম: পুরো লেখা ধরলে ভুল ক্যাটাগরি হতে পারে
     for cat, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
             if keyword_hit(text, kw):
@@ -277,10 +323,10 @@ def parse_json_text(text):
     return json.loads(text)
 
 # =========================================================
-# GEMINI (ফ্রি AI)
+# OPENAI CALL
 # =========================================================
 
-def call_gemini(prompt):
+def call_openai(prompt):
     """সফল হলে উত্তরের লেখা ফেরত দেয়, নাহলে None"""
     global AI_DISABLED, ACTIVE_MODEL
     if AI_DISABLED:
@@ -290,28 +336,31 @@ def call_gemini(prompt):
         print("    → সময়সীমা শেষ, এই রানে AI বন্ধ")
         return None
 
-    body = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.4,
-            "maxOutputTokens": 8192,   # বাংলা টোকেন বেশি খায়, ৪০৯৬-এ JSON মাঝপথে কেটে যেতে পারত
-            "responseMimeType": "application/json",
-        },
+    headers = {
+        "Authorization": f"Bearer {OPENAI_KEY}",
+        "Content-Type": "application/json",
     }
-    headers = {"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"}
 
-    # সফল মডেল আগে, তারপর বাকিগুলো
-    models = [m for m in GEMINI_MODELS if m not in DEAD_MODELS]
+    models = [m for m in OPENAI_MODELS if m not in DEAD_MODELS]
     if ACTIVE_MODEL in models:
         models.remove(ACTIVE_MODEL)
         models.insert(0, ACTIVE_MODEL)
 
     for model in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        body = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": "তুমি একজন অভিজ্ঞ বাংলা সংবাদ সম্পাদক। শুধু বৈধ JSON আউটপুট দাও, অন্য কোনো টেক্সট নয়।"},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.4,
+            "max_tokens": 2000,
+            "response_format": {"type": "json_object"},
+        }
         for attempt in range(2):
             t0 = time.time()
             try:
-                r = requests.post(url, headers=headers, json=body, timeout=REQUEST_TIMEOUT)
+                r = requests.post(OPENAI_URL, headers=headers, json=body, timeout=REQUEST_TIMEOUT)
             except Exception as e:
                 print(f"    → Network/timeout ({model}): {e}")
                 break  # পরের মডেল চেষ্টা
@@ -321,33 +370,31 @@ def call_gemini(prompt):
                 ACTIVE_MODEL = model
                 print(f"    → OK {model} {secs}s")
                 try:
-                    cand = r.json()["candidates"][0]
-                    parts = cand["content"]["parts"]
-                    return "".join(p.get("text", "") for p in parts)
+                    return r.json()["choices"][0]["message"]["content"]
                 except Exception:
-                    print("    → খালি বা ব্লক করা উত্তর")
+                    print("    → খালি বা অপঠনযোগ্য উত্তর")
                     return None
 
-            print(f"    → Gemini {r.status_code} ({model}, {secs}s): {r.text[:160]}")
+            print(f"    → OpenAI {r.status_code} ({model}, {secs}s): {r.text[:160]}")
 
             if r.status_code == 429:
                 if attempt == 0:
-                    time.sleep(20)   # প্রতি মিনিটের সীমা হলে অপেক্ষা
+                    time.sleep(15)   # রেট-লিমিট হলে অপেক্ষা
                     continue
-                DEAD_MODELS.add(model)   # এই মডেলের কোটা শেষ, বাকি মডেল চেষ্টা হবে
-                print(f"    → {model} এর সীমা শেষ, পরের মডেলে যাচ্ছি")
+                DEAD_MODELS.add(model)
+                print(f"    → {model} রেট-লিমিটেড, পরের মডেলে যাচ্ছি")
                 break
             if r.status_code in (401, 403):
                 AI_DISABLED = True
-                print("    → key সমস্যা, AI বন্ধ")
+                print("    → API key সমস্যা, AI বন্ধ")
                 return None
             if r.status_code == 404:
-                DEAD_MODELS.add(model)   # মডেলের নাম ভুল বা বন্ধ
+                DEAD_MODELS.add(model)   # মডেলের নাম ভুল বা অ্যাক্সেস নেই
             break  # 400, 5xx: পরের মডেল চেষ্টা
 
-    if all(m in DEAD_MODELS for m in GEMINI_MODELS):
+    if all(m in DEAD_MODELS for m in OPENAI_MODELS):
         AI_DISABLED = True
-        print("    → সব মডেলের সীমা শেষ, এই রানে AI বন্ধ")
+        print("    → সব মডেল ব্যর্থ, এই রানে AI বন্ধ")
     return None
 
 def rewrite_with_ai(title, content, is_english):
@@ -373,7 +420,7 @@ def rewrite_with_ai(title, content, is_english):
     )
 
     for attempt in range(2):
-        text = call_gemini(prompt)
+        text = call_openai(prompt)
         if text is None:
             if AI_DISABLED:
                 return None
@@ -394,22 +441,25 @@ def rewrite_with_ai(title, content, is_english):
 # COLLECT
 # =========================================================
 
-def collect(feed_urls, limit, per_feed_new, is_english, default_cat, min_len, used_ids, used_links):
+def collect(feed_list, limit, per_feed_new, is_english, default_cat, min_len, used_ids, used_links):
     items = []
-    feeds = list(feed_urls)
-    random.shuffle(feeds)   # প্রতি রানে ক্রম বদলায়, তাই শেষের ফিডগুলো কখনো বঞ্চিত হয় না
+    feeds = list(feed_list)
+    random.shuffle(feeds)   # প্রতি রানে ক্রম বদলায়, তাই শেষের ফিড/দেশ কখনো বঞ্চিত হয় না
 
-    for feed_url in feeds:
+    for feed in feeds:
+        feed_url = feed["url"]
+        feed_country = feed.get("country", "")
+
         if len(items) >= limit:
             break
         if over_budget():
             print("  সময়সীমা শেষ, এই ধাপ এখানেই থামল")
             break
         if AI_DISABLED and is_english:
-            print("  AI বন্ধ, ইংরেজি খবর রিরাইট সম্ভব নয়, ধাপ শেষ")
-            break
+            print("  AI বন্ধ, ইংরেজি খবর রিরাইট সম্ভব নয়, এই ফিড এড়িয়ে যাওয়া হলো")
+            continue   # পুরো ধাপ থামানো হয় না — শুধু AI ছাড়া চলবে না এমন ফিড এড়ানো হয়
 
-        print(f"  Fetching: {feed_url}")
+        print(f"  Fetching [{feed_country}]: {feed_url}")
         entries = get_rss_items(feed_url)
         print(f"    entries: {len(entries)}")
 
@@ -489,6 +539,8 @@ def collect(feed_urls, limit, per_feed_new, is_english, default_cat, min_len, us
                 "image": extract_image(entry),
                 "link": link,
                 "source": source_name(link),
+                "country": feed_country,
+                "country_name": COUNTRY_NAMES.get(feed_country, ""),
                 "region": region,
                 "ai_rewritten": bool(result),
                 "published_at": entry_time(entry),
@@ -507,7 +559,7 @@ def collect(feed_urls, limit, per_feed_new, is_english, default_cat, min_len, us
 
 def main():
     print("=" * 50)
-    print("DOP NEWS 24 — AI Bengali News Publisher (Gemini)")
+    print("DOP NEWS 24 — AI Bengali News Publisher (OpenAI)")
     print("=" * 50)
     print("trafilatura:", "yes" if trafilatura else "no (fallback parser)")
 
@@ -518,7 +570,6 @@ def main():
     old_articles = [a for a in all_old if is_bengali(a.get("title", ""))]
     print(f"Old articles kept: {len(old_articles)} / {len(all_old)}")
 
-    # শুধু রাখা খবরগুলো থেকে ব্যবহৃত তালিকা, নইলে বাদ পড়া খবর আর কখনো আসত না
     used_ids = {a["source_id"] for a in old_articles if a.get("source_id")}
     used_links = {norm_link(a["link"]) for a in old_articles if a.get("link")}
 
@@ -526,9 +577,16 @@ def main():
     bd = collect(BD_FEEDS, MAX_BD_PER_RUN, PER_FEED_NEW_BD, False, "বাংলাদেশ", 60, used_ids, used_links)
     print(f"  Added Bangladesh: {len(bd)}")
 
-    print("\n[2] World News...")
+    print("\n[2] World News (South Asia + USA + UK + Russia + International)...")
     world = collect(WORLD_FEEDS, MAX_WORLD_PER_RUN, PER_FEED_NEW_WORLD, True, "বিশ্ব", 40, used_ids, used_links)
     print(f"  Added World: {len(world)}")
+
+    # কোন দেশ থেকে কতটা এলো — ডিবাগের জন্য
+    by_country = {}
+    for a in bd + world:
+        c = a.get("country") or "?"
+        by_country[c] = by_country.get(c, 0) + 1
+    print("  Country breakdown:", by_country)
 
     combined = bd + world + old_articles
     combined.sort(key=lambda a: a.get("published_at", ""), reverse=True)
