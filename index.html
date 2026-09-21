@@ -250,15 +250,17 @@ const CAT_KEY = {
   "লাইফস্টাইল": "lifestyle"
 };
 
-// country কোড → পতাকা ইমোজি + বাংলা নাম (generate_news.py-র country/country_name ফিল্ডের সাথে মিলিয়ে)
 const COUNTRY_FLAGS = {
   BD: "🇧🇩", IN: "🇮🇳", PK: "🇵🇰", LK: "🇱🇰", NP: "🇳🇵",
   US: "🇺🇸", UK: "🇬🇧", RU: "🇷🇺", ME: "🕌", EU: "🇪🇺", INT: "🌐"
 };
 
-const HIDE_NON_BENGALI = true; // বাংলা ভাষায় ইংরেজি শিরোনামের খবর লুকাতে true, দেখাতে false
+const HIDE_NON_BENGALI = true;
 const BN = /[\u0980-\u09FF]/;
-const PAGE_SIZE = 15; // pagination গ্রিডে প্রতি পেজে কয়টা কার্ড দেখাবে (featured+side বাদে)
+const PAGE_SIZE = 15;
+
+// ✨ ডিফল্ট ছবি (কোনো ছবি না থাকলে এটি দেখাবে)
+const DEFAULT_IMAGE = "https://via.placeholder.com/600x400/e50914/ffffff?text=DOP+NEWS+24";
 
 function fixCat(a) {
   const l = (a.link || "").toLowerCase();
@@ -272,7 +274,11 @@ function fixCat(a) {
   return a.category || "বাংলাদেশ";
 }
 
-// আর্টিকেলের সোর্স/দেশ ব্যাজ টেক্সট বানায়, যেমন: "🇵🇰 dawn.com"
+// ✨ ছবির লিংক বের করার হেল্পার ফাংশন (বিভিন্ন ফিল্ড চেক করবে)
+function getImageUrl(a) {
+  return a.image || a.urlToImage || a.image_url || a.thumbnail || a.media || DEFAULT_IMAGE;
+}
+
 function sourceTag(a) {
   const flag = COUNTRY_FLAGS[a.country] || "";
   const src = a.source || "";
@@ -295,6 +301,7 @@ function navText(cat) {
 }
 
 function timeAgo(dateStr) {
+  if (!dateStr) return "";
   const diff = (Date.now() - new Date(dateStr)) / 1000;
   if (diff < 60) return t("justNow");
   if (diff < 3600) return Math.floor(diff / 60) + " " + t("minAgo");
@@ -409,8 +416,9 @@ function showCategory(cat) {
   }
 
   const main = list[0];
+  const mainImg = getImageUrl(main); // ✨
   fm.innerHTML = `
-    <img src="${escapeHtml(main.image || '')}" alt="">
+    <img src="${escapeHtml(mainImg)}" alt="" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}'">
     <div class="featured-text">
       <h1>${escapeHtml(main.title)}</h1>
       <p class="news-description">${escapeHtml(main.summary || "")}</p>
@@ -440,9 +448,11 @@ function showCategory(cat) {
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const grid = rest.slice(pageStart, pageStart + PAGE_SIZE);
 
-  ng.innerHTML = grid.map(a => `
+  ng.innerHTML = grid.map(a => {
+    const img = getImageUrl(a); // ✨
+    return `
     <div class="news-card">
-      <img class="news-image" src="${escapeHtml(a.image || '')}" alt="">
+      <img class="news-image" src="${escapeHtml(img)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}'">
       <div class="news-content">
         <div class="news-title">${escapeHtml(a.title)}</div>
         <div class="news-description">${escapeHtml((a.summary || "").slice(0, 120))}...</div>
@@ -451,7 +461,8 @@ function showCategory(cat) {
           ${sourceTag(a) ? `<div class="news-source-tag">${escapeHtml(sourceTag(a))}</div>` : ""}
         </div>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
   ng.querySelectorAll(".news-card").forEach((el, i) => {
     el.onclick = function() { openModal(grid[i]); };
   });
@@ -460,7 +471,10 @@ function showCategory(cat) {
 }
 
 function openModal(a) {
-  document.getElementById("modalImage").src = a.image || "";
+  const img = getImageUrl(a); // ✨
+  const imgEl = document.getElementById("modalImage");
+  imgEl.src = img;
+  imgEl.onerror = function() { this.onerror = null; this.src = DEFAULT_IMAGE; };
   document.getElementById("modalTitle").textContent = a.title;
   const tag = sourceTag(a);
   document.getElementById("modalDescription").innerHTML = `
