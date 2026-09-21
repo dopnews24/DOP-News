@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-20T23:17:02.868509+00:00",
+  "updated_at": "2026-09-21T00:20:44.958893+00:00",
   "articles": [
     {
       "id": "ac2a695501ceebea22ea",
@@ -411,6 +411,21 @@
       "image": "https://media.prothomalo.com/prothomalo-bangla/2026-09-20/sdyrsebt/NEXUSGIFT.jpg",
       "link": "https://www.prothomalo.com/bangladesh/i33izvud3d",
       "published_at": "2026-09-20T16:32:43+00:00"
+    },
+    {
+      "id": "352f976a47203e599efa",
+      "source_id": "e9ddaae00deac7e8c2d2",
+      "category": "বাংলাদেশ",
+      "cat_ok": true,
+      "title": "কমলাপুর স্টেশনে ট্রেনে আগুন",
+      "summary": "কমলাপুর স্টেশনে ট্রেনে আগুন\nরাজধানীর কমলাপুর রেলস্টেশনের ২ নম্বর প্ল্যাটফর্মে থাকা হাওর এক্সপ্রেস ট্রেনে আগুন লেগেছে। রোববার রাত ৯টা ৩৮ মিনিটের দিকে আগুন লাগার খবর পায় ফায়ার সার্ভিস।\nফায়ার সার্ভিসে...",
+      "content": "কমলাপুর স্টেশনে ট্রেনে আগুন\nরাজধানীর কমলাপুর রেলস্টেশনের ২ নম্বর প্ল্যাটফর্মে থাকা হাওর এক্সপ্রেস ট্রেনে আগুন লেগেছে। রোববার রাত ৯টা ৩৮ মিনিটের দিকে আগুন লাগার খবর পায় ফায়ার সার্ভিস।\nফায়ার সার্ভিসের নিয়ন্ত্রণকক্ষের ডিউটি অফিসার শাহ জাহান প্রথম আল...",
+      "image": "https://media.prothomalo.com/prothomalo-bangla/2026-09-20/k2m18lmi/Train.jpg",
+      "link": "https://www.prothomalo.com/bangladesh/capital/kb7nvzfgzo",
+      "source": "prothomalo.com",
+      "region": "bd",
+      "ai_rewritten": false,
+      "published_at": "2026-09-20T16:29:22+00:00"
     },
     {
       "id": "0a3f56d4802ce3783eec",
