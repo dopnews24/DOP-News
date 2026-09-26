@@ -14,8 +14,10 @@ a{text-decoration:none;color:inherit}
 
 header{background:#111;color:#fff;position:sticky;top:0;z-index:1000}
 .header-main{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.logo-wrap{display:flex;flex-direction:column;justify-content:center;line-height:1.1}
 .logo{font-size:30px;font-weight:900;letter-spacing:-1px}
 .logo span{color:#e50914}
+.tagline{font-size:11px;font-style:italic;letter-spacing:1px;color:#bbb;margin-top:2px}
 .language{background:#222;color:#fff;border:1px solid #444;padding:9px 12px;border-radius:5px;cursor:pointer;font-size:14px}
 
 nav{background:#222;border-top:1px solid #333}
@@ -107,7 +109,10 @@ footer p{color:#aaa;margin-top:8px}
 
 <header>
 <div class="container header-main">
+<div class="logo-wrap">
 <div class="logo">DOP <span>NEWS 24</span></div>
+<div class="tagline">Truth Beyond Headlines</div>
+</div>
 <select class="language" id="language">
 <option value="bn">বাংলা</option>
 <option value="en">English</option>
@@ -259,7 +264,6 @@ const HIDE_NON_BENGALI = true;
 const BN = /[\u0980-\u09FF]/;
 const PAGE_SIZE = 15;
 
-// ✅ ঠিক করা ডিফল্ট ছবি (SVG ডেটা URI - কোনো এক্সটার্নাল সাইট দরকার নেই)
 const DEFAULT_IMAGE = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Crect fill='%23e50914' width='600' height='400'/%3E%3Ctext x='50%25' y='50%25' fill='white' font-size='30' font-family='Arial' font-weight='bold' text-anchor='middle' dominant-baseline='middle'%3EDOP NEWS 24%3C/text%3E%3C/svg%3E";
 
 function fixCat(a) {
@@ -274,7 +278,6 @@ function fixCat(a) {
   return a.category || "বাংলাদেশ";
 }
 
-// ✅ ঠিক করা ছবির লিংক ফাংশন (CORS সমস্যা সমাধানে weserv.nl প্রক্সি ব্যবহার করে)
 function getImageUrl(a) {
   let img = a.image || a.urlToImage || a.image_url || a.thumbnail || a.media || "";
   if (!img || img.trim() === "") return DEFAULT_IMAGE;
